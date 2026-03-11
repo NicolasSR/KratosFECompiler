@@ -34,6 +34,7 @@ class SymbolicGenerator():
     def __init__(self, source_dir: Path, case_name: str, overwrite: bool):
         self.case_name = case_name
         self.case_dir = source_dir / self.case_name
+        self.case_output_dir = self.case_dir / "output"
         self.case_import_root = f"{source_dir}.{case_name}"
         self.overwrite = overwrite
 
@@ -41,12 +42,13 @@ class SymbolicGenerator():
         routine_script_file_path = self.case_dir / routine_script_file_name
         if not routine_script_file_path.is_file():
             raise FileNotFoundError(f"{routine_script_file_name} file not found within case {self.case_name}")
-        if not self.overwrite and any([(self.case_dir/n).is_file() for n in output_file_names]):
+        self.case_output_dir.mkdir(exist_ok=True)
+        if not self.overwrite and any([(self.case_output_dir/n).is_file() for n in output_file_names]):
             raise EnvironmentError(f"Case {case_name} already has results. To overwrite them use the --overwrite option")
         routine_module = importlib.import_module(f"{self.case_import_root}.{routine_script_file_path.stem}")
         compiler_outputs = routine_module.main()
         for i in range(len(output_file_names)):
-            with open(self.case_dir/output_file_names[i], 'w') as f:
+            with open(self.case_output_dir/output_file_names[i], 'w') as f:
                 f.write(compiler_outputs[i])
 
     def run_fe_compiler(self):

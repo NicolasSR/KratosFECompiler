@@ -32,9 +32,9 @@ class NumericCPPComparingEngine():
 
     def __init__(self, source_dir: Path, case_name: str):
         self.case_name = case_name
-        self.case_dir=source_dir/self.case_name
+        self.case_output_dir=source_dir/self.case_name/"output"
 
-        with open(self.case_dir/"cpp_interface.json", "r") as f:
+        with open(self.case_output_dir/"cpp_interface.json", "r") as f:
             cpp_interface_info = json.load(f)
 
         self.dim = cpp_interface_info["dim"]
@@ -66,7 +66,7 @@ class NumericCPPComparingEngine():
         if self._compiled_auto:
             return
         
-        self._compile("NS_AUTO", self.case_dir / "RHS.cpp", self.case_dir / "LHS.cpp", vars_dict)
+        self._compile("NS_AUTO", self.case_output_dir / "RHS.cpp", self.case_output_dir / "LHS.cpp", vars_dict)
         
         self._compiled_auto = True
 
@@ -75,7 +75,7 @@ class NumericCPPComparingEngine():
         if self._compiled_manual:
             return
         
-        self._compile("NS_MANUAL", self.case_dir / "manual_RHS.cpp", self.case_dir / "manual_LHS.cpp", vars_dict)
+        self._compile("NS_MANUAL", self.case_output_dir / "manual_RHS.cpp", self.case_output_dir / "manual_LHS.cpp", vars_dict)
         
         self._compiled_manual = True
 
@@ -211,51 +211,6 @@ class NumericCPPComparingEngine():
 
         print('Max diff RHS:', max_rhs)
         print('Max diff LHS:', max_lhs)
-
-    
-#     def compute_rhs(self):
-
-#         result = np.zeros((9), dtype=np.float64)
-
-#         values_dict = self.generate_values_set()
-
-#         cpp_var_definitions = ""
-#         cpp_var_definitions += f"    #define DN(i,j) DN_raw[i*{self.dim}+j]\n"
-#         cpp_arguments = "double* rRightHandSideVector, double w_g, double* N, double* DN_raw"
-#         for var_type, vars_list in self.vars_dict.items():
-#             for var in vars_list:
-#                 if var_type == "scalars":
-#                     cpp_arguments+=f", double {var}"
-#                 else:
-#                     shape = self.shape_map[var_type]
-#                     if len(shape)==2:
-#                         cols = shape[0]
-#                         cpp_var_definitions += f"    #define {var}(i,j) {var}_raw[i*{int(cols)}+j]\n"
-#                         cpp_arguments+=f", double* {var}_raw"
-#                     else:
-#                         cpp_arguments+=f", double* {var}"
-        
-#         with open(self.case_dir/"RHS.cpp", "r") as f:
-#             rhs_code = f.read()
-
-#         full_cpp_code = """
-# void evaluate_snippet("""+cpp_arguments+""") {
-#     // Map raw pointers to something usable or just use array indexing
-# """+cpp_var_definitions+rhs_code+"}"
-
-#         print(full_cpp_code)
-
-#         # Define a wrapper function in C++
-#         cppyy.cppdef(full_cpp_code)
-
-#         flat_values_list = []
-#         for values_list in values_dict.values():
-#             flat_values_list.append(values_list)
-
-#         # Call it from Python
-#         print(flat_values_list)
-#         cppyy.gbl.evaluate_snippet(result, *flat_values_list)
-#         print(result)
 
 
 if __name__ == "__main__":
