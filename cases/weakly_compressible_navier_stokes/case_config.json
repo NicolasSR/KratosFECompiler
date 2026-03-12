@@ -1,0 +1,7 @@
+{
+    "dim": 3,
+    "nnodes": 4,
+    "formulation": "WeaklyCompressibleNavierStokes",
+    "divide_by_rho": true,
+    "ASGS_stabilization": true
+}
