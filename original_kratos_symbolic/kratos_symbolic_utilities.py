@@ -277,7 +277,11 @@ def DoubleContraction(A,B):
 
 def MatrixB(DN):
     """
-    This method defines the deformation matrix B.
+    This method defines the deformation matrix B in a non-standard way.
+
+    IMPORTANT: THIS B MATRIX IS MISSING ALL 1/2 FACTORS.
+    This is compensated be the fact that the implementation of the Voigt notation (matrix) for 4th order
+    tensors with three symmetries is also missing all factors 2.
 
     Keyword arguments:
     - DN -- The shape function derivatives
@@ -316,7 +320,11 @@ def MatrixB(DN):
 
 def grad_sym_voigtform(DN, x):
     """
-    This method defines a symmetric gradient.
+    This method defines the voigt form (vector) of the quantity:
+    2*grad_sym(x)-diag(grad(x))
+
+    IMPORTANT: IT IS NOT EXACTLY THE VOIGT OF THE SYMMETRIC GRAD.
+        It is useful in order to do A:X as dot(voigt(A),grad_sym_voigtform(X)) id A is symmetric
 
     Keyword arguments:
     - DN -- The shape function derivatives

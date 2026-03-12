@@ -9,7 +9,8 @@ from lib.utilities import substitute_symbols, substitute_functions
 
 VOIGT_INDEX_DICT = {
     2: [[0,0],[1,1],[0,1]],
-    3: [[0,0],[1,1],[2,2],[1,2],[0,2],[0,1]]
+    # 3: [[0,0],[1,1],[2,2],[1,2],[0,2],[0,1]] # Standard Voigt notation
+    3: [[0,0],[1,1],[2,2],[0,1],[1,2],[0,2]]  # Kratos Voigt notation
     }
 
 def disambiguate_var_group(var_group, SYMB):

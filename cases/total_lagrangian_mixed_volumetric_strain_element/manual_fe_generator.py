@@ -4,7 +4,7 @@
 import sympy
 import original_kratos_symbolic.kratos_symbolic_utilities as ksu
 
-def main():
+def main(options_dict):
 
     # Symbolic generation settings
     dim = 2

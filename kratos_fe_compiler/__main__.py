@@ -1,5 +1,6 @@
 import importlib
 from pathlib import Path
+import json
 
 from docopt import docopt
 
@@ -37,6 +38,15 @@ class SymbolicGenerator():
         self.case_output_dir = self.case_dir / "output"
         self.case_import_root = f"{source_dir}.{case_name}"
         self.overwrite = overwrite
+        self.get_case_config()
+
+    def get_case_config(self):
+        try:
+            with open(self.case_dir/"case_config.json", 'r') as f:
+                self.case_config = json.load(f)
+        except:
+            print("No case config file available. Proceeding without it")
+            self.case_config = {}
 
     def call_symbolic_routine(self, routine_script_file_name, output_file_names):
         routine_script_file_path = self.case_dir / routine_script_file_name
@@ -46,7 +56,7 @@ class SymbolicGenerator():
         if not self.overwrite and any([(self.case_output_dir/n).is_file() for n in output_file_names]):
             raise EnvironmentError(f"Case {case_name} already has results. To overwrite them use the --overwrite option")
         routine_module = importlib.import_module(f"{self.case_import_root}.{routine_script_file_path.stem}")
-        compiler_outputs = routine_module.main()
+        compiler_outputs = routine_module.main(self.case_config)
         for i in range(len(output_file_names)):
             with open(self.case_output_dir/output_file_names[i], 'w') as f:
                 f.write(compiler_outputs[i])

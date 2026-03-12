@@ -30,9 +30,19 @@ def tensor_singlecontract(a: sp.Array, b: sp.Array):
     assert a.rank()>=1 and b.rank()>=1
     return sp.tensorcontraction(sp.tensorproduct(a,b),(a.rank()-1,a.rank()))
 
+# def tensor_doublecontract(a: sp.Array, b: sp.Array):
+#     assert a.rank()>=2 and b.rank()>=2
+#     # a_ijkl:b_mn -> c_ijklmn -> c_ijklml = d_ijkm-> d_ijkk = c_ijklkl
+#     # a_ijk:b_lmn -> c_ijklmn -> c_ijklkn = d_ijln-> d_ijjn = c_ijkjkn
+#     # a_ij:b_lm -> c_ijlm -> c_ijlj = d_il-> d_ii = c_ijij = a_ij:b:ij
+#     # For tensors of rank 2 it's the same as UFL's inner product. For higher ranks it differs.
+#     contracted = sp.tensorcontraction(sp.tensorproduct(a,b),(a.rank()-1,a.rank()+1))
+#     return sp.tensorcontraction(contracted, (a.rank()-2,a.rank()-1))
+
 def tensor_doublecontract(a: sp.Array, b: sp.Array):
     assert a.rank()>=2 and b.rank()>=2
     # a_ijk:b_lmn -> c_ijklmn -> c_ijkjmn -> c_ijkjkn
+    # a_ij:b_lm -> c_ijlm -> c_ijim = d_jm-> d_jj = c_ijij = a_ij:b:ij
     # For tensors of rank 2 it's teh same as UFL's inner product. For higher ranks it differs.
     contracted = sp.tensorcontraction(sp.tensorproduct(a,b),(a.rank()-2,a.rank()))
     return sp.tensorcontraction(contracted, (a.rank()-2,a.rank()-1))

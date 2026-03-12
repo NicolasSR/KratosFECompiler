@@ -9,7 +9,7 @@ import numpy as np
 from lib.basic_classes import DofsIndicator, DerivIndicator
 from kratos_fe_compiler.compiler import compile
 
-def main():
+def main(options_dict):
 
     ## User inputs:
     dim = 2
