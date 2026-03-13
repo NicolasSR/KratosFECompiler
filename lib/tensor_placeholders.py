@@ -288,7 +288,7 @@ class SymbolicTensorPlaceholderRank2(SymbolicTensorPlaceholder):
                 idx_list = VOIGT_INDEX_DICT[self.dim][i]
                 expr = expr.subs(self.array[idx_list],self.gauss[i])
         else:
-            self.substitute_components_simulatneous(expr, self.array, self.gauss)
+            expr = self.substitute_components_simulatneous(expr, self.array, self.gauss)
         return expr
 
 class SymbolicTensorPlaceholderRank4(SymbolicTensorPlaceholder):
