@@ -1,167 +1,196 @@
+import importlib
+
 import sympy as sp
-
-from lib.basic_classes import BaseTensorPlaceholder
-from lib.printers import CustomLatexPrinter
 from sympy.printing.precedence import PRECEDENCE, PRECEDENCE_TRADITIONAL
-from lib.tensor_operators import *
 
-
-## Define array-compatible versions of most basic operators
-
-class add_op(sp.Function):
-    # precedence = PRECEDENCE["Add"]
-    # is_Add = True
-
-    @classmethod
-    def eval(cls, *args):
-        do_eval = True
-        for arg in args:
-            if arg.has(BaseTensorPlaceholder):
-                do_eval = False
-        if do_eval:
-            rv = args[0]
-            for arg in args[1:]:
-                rv += arg
-            return rv
-        
-    def doit(self, deep=False, **hints):
-        exp_args = []
-        if deep:
-            for arg in self.args:
-                exp_args.append(arg.doit(deep=deep, **hints))
-        else: 
-            exp_args = self.args
-        rv = exp_args[0]
-        for exp_arg in exp_args[1:]:
-            rv += exp_arg
-        return rv
-
-class prod_op(sp.Function):
-    # precedence = PRECEDENCE['Mul']
-    # is_Mul = True
-
-    @classmethod
-    def eval(cls, a, b):
-        if not a.has(BaseTensorPlaceholder) and not b.has(BaseTensorPlaceholder):
-            return a*b
-        
-    def doit(self, deep=False, **hints):
-        a, b = self.args
-        if deep:
-           a, b = a.doit(deep=deep, **hints), b.doit(deep=deep, **hints)
-        return a*b
-
-class neg_op(sp.Function):
-
-    @classmethod
-    def eval(cls, a):
-        return prod_op(-1,a)
-
-class sub_op(sp.Function):
-
-    @classmethod
-    def eval(cls, a, b):
-        return add_op(a,neg_op(b))
+from lib.basic_classes import BaseTensorPlaceholder, DeferredAdd, DeferredMul, check_if_scalar
+from lib.printers import CustomLatexPrinter
+from lib.registry import load_operators
+from lib.yaml_utils import evaluate_yaml_operators_tree
+from lib.coordinates_system import ACTIVE_COORD_SYSTEM
 
 ## Define tensorial operators
-class norm_op(sp.Function):
 
-    @classmethod
-    def eval(cls, a):
-        if not a.has(BaseTensorPlaceholder):
-            return sp.sqrt(tensor_dot(a,a))
-        
-    def _latex(self, printer, exp=None, *args):
-        if isinstance(printer, CustomLatexPrinter):
-            a = printer._print(self.args[0])
-            if exp is None:
-                return r"\lVert %s \rVert" % (a)
-            else:
-                return r"\lVert %s \rVert^{%s}" % (a, exp)
-        else:
-            return printer._print_Function(self, exp=exp)
+class DeferredTensorOp(sp.Expr):
+    is_commutative = True  # This allows SymPy to automatically simplify expressions like a + b + c, even if a, b, c are DeferredTensorOps
 
-class dot_op(sp.Function):
-    precedence = PRECEDENCE_TRADITIONAL['Dot']
+    operators_config = load_operators() # Load operator definitions from YAML
 
-    @classmethod
-    def eval(cls, a, b):
-        if not a.has(BaseTensorPlaceholder) and not b.has(BaseTensorPlaceholder):
-            return tensor_dot(a,b)
-        
-    def _latex(self, printer, exp=None, *args):
-        if isinstance(printer, CustomLatexPrinter):
-            a, b = self.args
-            rv = r"%s \cdot %s" % (printer.parenthesize(a, PRECEDENCE['Mul']),
-                                 printer.parenthesize(b, PRECEDENCE['Mul']))
-            if exp is None:
-                return rv
-            else:
-                return r"\left(%s\right)^{%s}" % (rv, exp)
-        else:
-            return printer._print_Function(self, exp=exp)
-        
-class contract_op(sp.Function):
-    precedence = PRECEDENCE_TRADITIONAL['Dot']
-
-    @classmethod
-    def eval(cls, a, b):
-        if not a.has(BaseTensorPlaceholder) and not b.has(BaseTensorPlaceholder):
-            return tensor_singlecontract(a,b)
+    def __new__(cls, *args):
+        # Validation: get list of ranks and dims and apply custom checks
+        ranks, dims = cls._get_ranks_and_dims(args)
+        config = cls.operators_config.get(cls.__name__, None)
+        if config is None:
+            raise ValueError(f"No operator configuration found for {cls.__name__}")
+        arity = config.get('arity', None)
+        if arity is None:
+            raise ValueError(f"Operator {cls.__name__} has no arity defined")
+        if len(args) != arity:
+            raise ValueError(f"{cls.__name__} expects exactly {arity} arguments, got {len(args)}")
+        constraints = config.get('constraints', {})
+        if 'rank' in constraints.keys():
+            is_valid, err_str = cls._validate_inputs(ranks, constraints, 'rank')
+            if not is_valid:
+                raise ValueError(err_str)
+        if arity > 1 and 'dim' in constraints.keys():
+            is_valid, err_str = cls._validate_inputs(dims, constraints, 'dim')
+            if not is_valid:
+                raise ValueError(err_str)
+        return sp.Expr.__new__(cls, *args)
     
-    def _latex(self, printer, exp=None, *args):
-        if isinstance(printer, CustomLatexPrinter):
-            a, b = self.args
-            rv = r"%s \cdot %s" % (printer.parenthesize(a, PRECEDENCE['Mul']),
-                                 printer.parenthesize(b, PRECEDENCE['Mul']))
-            if exp is None:
-                return rv
+    @staticmethod
+    def _get_ranks_and_dims(args):
+        ranks = []
+        dims = []
+        for arg in args:
+            if check_if_scalar(arg):
+                rank = 0
+                dim = []
+            elif isinstance(arg, sp.NDimArray):
+                dim_aux = list(arg.shape)
+                if sum(dim_aux) == 1:
+                    rank = 0
+                    dim = []
+                else:
+                    rank = arg.rank()
+                    dim = dim_aux
             else:
-                return r"\left(%s\right)^{%s}" % (rv, exp)
-        else:
-            return printer._print_Function(self, exp=exp)
-
-class doublecontract_op(sp.Function):
-    precedence = PRECEDENCE_TRADITIONAL['Dot']
-
+                rank = getattr(arg, 'rank', None)
+                dim = getattr(arg, 'dim', None)
+            ranks.append(rank)
+            dims.append(dim)
+        return ranks, dims
+    
     @classmethod
-    def eval(cls, a, b):
-        if not a.has(BaseTensorPlaceholder) and not b.has(BaseTensorPlaceholder):
-            return tensor_doublecontract(a,b)
-        
-    def _latex(self, printer, exp=None, *args):
-        if isinstance(printer, CustomLatexPrinter):
-            a, b = self.args
-            rv = r"%s : %s" % (printer.parenthesize(a, PRECEDENCE['Mul']),
-                                 printer.parenthesize(b, PRECEDENCE['Mul']))
-            if exp is None:
-                return rv
-            else:
-                return r"\left(%s\right)^{%s}" % (rv, exp)
-        else:
-            return printer._print_Function(self, exp=exp)
-        
-class grad_op(sp.Function): # Returns dfj/dxi
-    precedence = PRECEDENCE_TRADITIONAL['Gradient']
+    def _validate_inputs(cls, values_list, constraints, quantity_name):
+        vars = {'a': values_list[0], 'b': values_list[1]} if len(values_list) == 2 else {'a': values_list[0]}
+        is_valid = evaluate_yaml_operators_tree(constraints[quantity_name], vars)
+        if not is_valid:
+            return False, f"{quantity_name} constraints not satisfied in {cls.__name__}. Values: {values_list}"
+        return True, ""
 
-    @classmethod
-    def eval(cls, a, base_scalars, transposed_gradients):
-        if not a.has(BaseTensorPlaceholder) and not base_scalars.has(BaseTensorPlaceholder):
-            if transposed_gradients:
-                return tensor_transpose_grad(a,base_scalars)
-            else:
-                return tensor_grad(a,base_scalars)
+    @property
+    def rank(self):
+        ranks, _ = self._get_ranks_and_dims(self.args)
+        vars = {'a': ranks[0], 'b': ranks[1]} if len(self.args) == 2 else {'a': ranks[0]}
+        class_name = self.__class__.__name__
+        output_config = self.operators_config[class_name]['output']
+        return evaluate_yaml_operators_tree(output_config['rank'], vars)
+    
+    @property
+    def dim(self):
+        _, dims = self._get_ranks_and_dims(self.args)
+        vars = {'a': dims[0], 'b': dims[1]} if len(self.args) == 2 else {'a': dims[0]}
+        class_name = self.__class__.__name__
+        output_config = self.operators_config[class_name]['output']
+        return evaluate_yaml_operators_tree(output_config['dim'], vars)
+
+    def evaluate(self, *args):
+        # Resolve dependencies recursively
+        resolved_args = [arg.evaluate() if hasattr(arg, 'evaluate') else arg for arg in self.args]
+        resolved_args.extend([arg.evaluate() if hasattr(arg, 'evaluate') else arg for arg in args])
+
+        # Perform the actual numeric math
+        if all(not arg.has(BaseTensorPlaceholder) for arg in resolved_args):
+            class_name = self.__class__.__name__
+            implementation_name = self.operators_config[class_name]['implementation']
+            
+            # Dynamically loads the function from the tensor operators file.
+            try:
+                # Import the module
+                module = importlib.import_module('lib.tensor_operators')
+                # Get the function object by name
+                op_func = getattr(module, implementation_name)
+                # Return the result of the function call with the resolved arguments
+                return op_func(*resolved_args)
+            except (ImportError, AttributeError) as e:
+                raise ValueError(f"Could not find implementation '{implementation_name}': {e}")
         
+        # If still symbolic, return the symbolic representation
+        return self.func(*resolved_args)
+    
+    # Algebraic operators
+
+    def __add__(self, other):
+        # return add_op(self, other)
+        return DeferredAdd(self, other)
+    
+    def __radd__(self, other):
+        # return add_op(other, self)
+        return DeferredAdd(other, self)
+    
+    def __mul__(self, other):
+        # return prod_op(self, other)
+        return DeferredMul(self, other)
+    
+    def __rmul__(self, other):
+        # return prod_op(other, self)
+        return DeferredMul(other, self)
+    
+    # Printing
     def _latex(self, printer, exp=None, *args):
         if isinstance(printer, CustomLatexPrinter):
-            a, base_scalars, transposed_gradients = self.args
-            rv = r"\nabla %s" % printer.parenthesize(a, PRECEDENCE['Mul'])
+            class_name = self.__class__.__name__
+            latex_pattern = self.operators_config[class_name]['latex']
+            a = printer._print(self.args[0])
+            b = printer._print(self.args[1]) if len(self.args) > 1 else None
+            latex_string = latex_pattern.format(a=a, b=b)
             if exp is None:
-                return rv
+                return latex_string
             else:
-                return r"\left(%s\right)^{%s}" % (rv, exp)
+                if self.operators_config[class_name].get('needs_parentheses_when_exp', True):
+                    latex_string = r"\left(%s\right)" % latex_string
+                return r"{%s}^{%s}" % (latex_string, exp)
         else:
             return printer._print_Function(self, exp=exp)
+    
+    def __format__(self, format_spec: str):
+        # This forces f-strings to use your __str__ method, 
+        # and then apply standard string formatting on top of that.
+        return sp.sstr(self).__format__(format_spec)
+    
+
+class norm_op(DeferredTensorOp):
+    # It inherits all behavior from DeferredTensorOp 
+    # which uses the YAML definition for 'norm_op'.
+    pass
+
+
+class dot_op(DeferredTensorOp):
+    # It inherits all behavior from DeferredTensorOp 
+    # which uses the YAML definition for 'dot_op'.
+    pass
+    
+        
+class contract_op(DeferredTensorOp):
+    # It inherits all behavior from DeferredTensorOp 
+    # which uses the YAML definition for 'contract_op'.
+    pass
+
+class doublecontract_op(DeferredTensorOp):
+    # It inherits all behavior from DeferredTensorOp 
+    # which uses the YAML definition for 'doublecontract_op'.
+    pass
+        
+class grad_op(DeferredTensorOp): # Returns dfj/dxi
+    
+    def evaluate(self):
+        # Retrieve the current active system
+        coords = ACTIVE_COORD_SYSTEM.get()["coord_symbols"]
+        if coords is None:
+            raise RuntimeError("grad_op called outside of a 'with CoordinateSystem(...)' block.")
+            
+        # Add coordinate symbols list as an argument to the parent's evaluate() mehtod
+        return super().evaluate(coords)
+    
+    @property
+    def dim(self):
+        _, dims = self._get_ranks_and_dims(self.args)
+        coord_dims = [len(ACTIVE_COORD_SYSTEM.get()["coord_symbols"])]
+        vars = {'a': dims[0], 'b': dims[1]} if len(self.args) == 2 else {'a': dims[0], 'coords': coord_dims}
+        class_name = self.__class__.__name__
+        output_config = self.operators_config[class_name]['output']
+        return evaluate_yaml_operators_tree(output_config['dim'], vars)
 
 # class grad_transposed_op(sp.Function):  # Returns dfi/dxj
 #     precedence = PRECEDENCE_TRADITIONAL['Gradient']

@@ -1,0 +1,126 @@
+operators:
+  dot_op:
+    name: "Dot Product"
+    description: "Computes the dot product of two vectors."
+    arity: 2
+    latex: "{a} \\cdot {b}"
+    needs_parentheses_when_exp: true
+    constraints:
+      rank:
+        op: "and"
+        args:
+          - op: "eq"
+            args: ["a", 1]
+          - op: "eq"
+            args: ["b", 1]
+      dim:
+        op: "eq"
+        args: ["a", "b"]
+    output:
+      rank: 0
+      dim: "empty_list"
+    implementation: "tensor_vector_dot"
+
+  norm_op:
+    name: "Vector Norm"
+    description: "Computes the L2 norm of a vector."
+    arity: 1
+    latex: "\\lVert {a} \\rVert"
+    needs_parentheses_when_exp: false
+    constraints:
+      rank:
+        op: "eq"
+        args: ["a", 1]
+    output:
+      rank: 0
+      dim: "empty_list"
+    implementation: "tensor_vector_norm"
+
+  contract_op:
+    name: "Single Contraction of Tensors"
+    description: "Contracts one index between two tensors (last index of the first tensor and first index of the second tensor). For vectors, it is the dot product, for matrices, it is the matrix product."
+    arity: 2
+    latex: "{a} \\cdot {b}"
+    needs_parentheses_when_exp: true
+    constraints:
+      rank:
+        op: "and"
+        args:
+          - op: "ge"
+            args: ["a", 1]
+          - op: "ge"
+            args: ["b", 1]
+      dim:
+        op: "eq"
+        args:
+          - op: "slice"
+            args: ["a", -1, null]
+          - op: "slice"
+            args: ["b", 0, 1]
+    output:
+      rank:
+        op: "sub"
+        args:
+          - op: "add"
+            args: ["a", "b"]
+          - 2
+      dim:
+        op: "concat"
+        args:
+          - op: "slice"
+            args: ["a", 0, -1]
+          - op: "slice"
+            args: ["b", 1, null]
+    implementation: "tensor_singlecontract"
+
+  doublecontract_op:
+    name: "Double Contraction of Tensors"
+    description: "Contracts two indices between two tensors (last two indices of the first tensor and first two indices of the second tensor): a_i...jk b_jk...n."
+    arity: 2
+    latex: "{a} : {b}"
+    needs_parentheses_when_exp: true
+    constraints:
+      rank:
+        op: "and"
+        args:
+          - op: "ge"
+            args: ["a", 2]
+          - op: "ge"
+            args: ["b", 2]
+      dim:
+        op: "eq"
+        args:
+          - op: "slice"
+            args: ["a", -2, null]
+          - op: "slice"
+            args: ["b", 0, 2]
+    output:
+      rank:
+        op: "sub"
+        args:
+          - op: "add"
+            args: ["a", "b"]
+          - 4
+      dim:
+        op: "concat"
+        args:
+          - op: "slice"
+            args: ["a", 0, -2]
+          - op: "slice"
+            args: ["b", 2, null]
+    implementation: "tensor_doublecontract"
+
+  grad_op:
+    name: "Gradient of Tensor Field"
+    description: "Gradient of Tensor Field with respect to the reference coordinates defined in the system. Uses convention grad(f)_ij=df_j/dx_i."
+    arity: 1
+    latex: "\nabla {a}"
+    needs_parentheses_when_exp: true
+    output:
+      rank:
+        op: "add"
+        args: ["a", 1]
+      dim:
+        op: "concat"
+        args: ["coords", "a"]
+    implementation: "tensor_grad"

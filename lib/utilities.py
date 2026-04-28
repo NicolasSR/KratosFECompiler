@@ -10,9 +10,9 @@ def substitute_symbols(input_string):
 # Probably should be in another utilities file and given a more specific name
 def substitute_functions(input_string):
     substitutions_list = [
-        ('add_op(', 'po.add_op('),
-        ('prod_op(', 'po.prod_op('),
-        ('sub_op(', 'po.sub_op('),
+        ('add_op(', 'add_op('),
+        ('prod_op(', 'prod_op('),
+        ('sub_op(', 'sub_op('),
         ('symgrad(', 'po.symgrad_op('),
         ('grad(', 'po.grad_op('),
         ('div(', 'po.div_op('),

@@ -22,9 +22,13 @@ def tensor_div(var:sp.Array, base_scalars: Tuple):
     var_grad = tensor_grad(var, base_scalars)
     return sp.tensorcontraction(var_grad, (0, 1))
 
-def tensor_dot(a: sp.Array, b: sp.Array):
+def tensor_vector_dot(a: sp.Array, b: sp.Array):
     assert a.rank()==1 and b.rank()==1
     return sp.tensorcontraction(sp.tensorproduct(a,b),(0,1))
+
+def tensor_vector_norm(a: sp.Array):
+    assert a.rank()==1
+    return sp.sqrt(tensor_vector_dot(a,a))
 
 def tensor_singlecontract(a: sp.Array, b: sp.Array):
     assert a.rank()>=1 and b.rank()>=1
@@ -41,8 +45,8 @@ def tensor_singlecontract(a: sp.Array, b: sp.Array):
 
 def tensor_doublecontract(a: sp.Array, b: sp.Array):
     assert a.rank()>=2 and b.rank()>=2
-    # a_ijk:b_lmn -> c_ijklmn -> c_ijkjmn -> c_ijkjkn
-    # a_ij:b_lm -> c_ijlm -> c_ijim = d_jm-> d_jj = c_ijij = a_ij:b:ij
+    # a_ijk:b_lmn -> c_ijklmn -> c_ijkjmn -> d_in = c_ijkjkn = a_ijk b_jkn
+    # a_ij:b_lm -> c_ijlm -> c_ijim = d_jm-> d_jj = c_ijij = a_ij b_ij
     # For tensors of rank 2 it's teh same as UFL's inner product. For higher ranks it differs.
     contracted = sp.tensorcontraction(sp.tensorproduct(a,b),(a.rank()-2,a.rank()))
     return sp.tensorcontraction(contracted, (a.rank()-2,a.rank()-1))

@@ -1,0 +1,40 @@
+{
+    "quantities": {
+        "unknown_vars": [
+            {
+                "symbol": "v",
+                "tensor_rank": 1,
+                "test_function_symbol": "w"
+            },{
+                "symbol": "p",
+                "tensor_rank": 0,
+                "test_function_symbol": "q"
+            }
+        ]
+    },
+    "functional_ssa": [
+        {"name": "aux_1", "AST":{
+            "op": "doublecontract_op",
+            "args": [
+                {
+                    "op": "grad_op",
+                    "args": ["v"]
+                },{
+                    "op": "grad_op",
+                    "args": ["w"]
+                }]
+        }},
+        {"name": "aux_2", "AST":{
+            "op": "add",
+            "args": [
+                "p",
+                {"op": "norm_op", "args": ["w"]},
+                2
+            ]
+        }},
+        {"name": "functional_rhs", "AST":{
+            "op": "add",
+            "args": ["aux_1", "aux_2"]
+        }}
+    ]
+}

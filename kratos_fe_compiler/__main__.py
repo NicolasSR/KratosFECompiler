@@ -89,5 +89,5 @@ if __name__ == "__main__":
 
     symbolic_generator = SymbolicGenerator(source_dir, case_name, overwrite)
 
-    generation_funciton = getattr(symbolic_generator,"run_"+type)
-    generation_funciton()
+    generation_function = getattr(symbolic_generator,"run_"+type)
+    generation_function()

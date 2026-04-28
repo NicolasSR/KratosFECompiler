@@ -3,7 +3,7 @@ import re
 import sympy as sp
 
 from lib.tensor_placeholders import *
-from lib.basic_classes import VarsCombination, DofsIndicator
+from lib.basic_classes import VarsCombination, DofsIndicator, add_op, prod_op, sub_op, neg_op
 from lib.kratos_utilities import DefineShapeFunctions, Compute_RHS, Compute_LHS
 from lib.cpp_output_utils import OutputVector_CollectingFactors, OutputMatrix_CollectingFactors
 from lib.printers import print_my_latex
