@@ -1,4 +1,5 @@
 import lib.placeholder_operators as po
+from lib.basic_classes import DerivIndicator
 
 class DSLInterpreter():
     
@@ -8,9 +9,21 @@ class DSLInterpreter():
 
         self.operator_map = {
             "add": self.add,
-            "doublecontract_op": po.doublecontract_op,
-            "grad_op": po.grad_op,
-            "norm_op": po.norm_op
+            "doublecontract": po.doublecontract_op,
+            "grad": po.grad_op,
+            "norm": po.norm_op,
+            "symgrad": po.symgrad_op,
+            "div": po.div_op,
+            "curl": po.curl_op,
+            "curl_2d": po.curl_2d_op,
+            "mat_prod": po.matrix_prod_op,
+            "transpose": po.matrix_transpose_op,
+            "mat_vec_prod": po.matrix_vector_prod_op,
+            "mat_det": po.matrix_det_op,
+            "mat_inv": po.matrix_inv_op,
+            "mat_cofactor": po.matrix_cofactor_op,
+            "cross_prod": po.vector_cross_prod_op,
+            "vec_outer_prod": po.vector_outer_prod_op
         }
 
     def interpret_single_abs(self,abs):
@@ -42,3 +55,23 @@ class DSLInterpreter():
             return args[0] + args[1]
         else:
             return args[0] + self.add(*args[1:])
+        
+class SubstitutionsDSLInterpreter():
+
+    def __init__(self, substitutions_dict):
+        self.substitutions_dict = substitutions_dict
+
+    def interpret_single_component(self,component):
+        if component["op"] == "array":
+            return component["args"][0]
+        elif component["op"] == "deriv":
+            return DerivIndicator(component["args"][0], component["args"][1])
+        raise TypeError("Unrecognized operator")
+    
+    def interpret_substitutions(self):
+        out_subst_dict = {}
+        for subst_group_key, subst_group_val in self.substitutions_dict.items():
+            out_subst_dict[subst_group_key] = [] 
+            for subst_list in subst_group_val:
+                out_subst_dict[subst_group_key].append(tuple([self.interpret_single_component(component) for component in subst_list]))
+        return out_subst_dict

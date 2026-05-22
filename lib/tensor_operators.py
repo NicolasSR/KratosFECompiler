@@ -5,6 +5,10 @@ import sympy as sp
 def tensor_grad(var:sp.Array, base_scalars: Tuple):
     return sp.derive_by_array(var, sp.Array([*base_scalars]))
 
+def tensor_mat_transpose(a:sp.Array):
+    assert a.rank()==2
+    return sp.permutedims(a,(1,0))
+
 def tensor_transpose_grad(var:sp.Array, base_scalars: Tuple):
     grad = sp.derive_by_array(var, base_scalars)
     var_rank = sp.Array(var).rank()
@@ -21,6 +25,39 @@ def tensor_symgrad(var:sp.Array, base_scalars: Tuple):
 def tensor_div(var:sp.Array, base_scalars: Tuple):
     var_grad = tensor_grad(var, base_scalars)
     return sp.tensorcontraction(var_grad, (0, 1))
+
+def _get_levi_civita_array(dim):
+    e = []
+    for i in range(dim):
+        e.append([])
+        for j in range(dim):
+            if dim==2:
+                e[-1].append(sp.LeviCivita(i, j))
+            elif dim==3:
+                e[-1].append([])
+                for k in range(dim):
+                    e[-1][-1].append(sp.LeviCivita(i, j, k))
+            else:
+                raise Exception("Only dimensions 2 or 3 accepted for Levi-Civita array generation")
+    return sp.Array(e)
+
+def tensor_3D_curl(var:sp.Array, base_scalars: Tuple):
+    # curl = e_ijk * D_j(u_k)
+    # e_ijk = 3D Levi-Civita symbol
+    assert var.rank()==1 & var.shape[0]==3
+    grad = tensor_grad(var, base_scalars)
+    e_tensor = _get_levi_civita_array(3)
+    aux = sp.tensorproduct(e_tensor,grad)
+    return sp.tensorcontraction(sp.tensorcontraction(aux, (1,3)), (1,2))
+
+def tensor_2D_curl(var:sp.Array, base_scalars: Tuple):
+    # curl = e_jk * D_j(u_k)
+    # e_jk = 2D Levi-Civita symbol
+    assert var.rank()==1 & var.shape[0]==2
+    grad = tensor_grad(var, base_scalars)
+    e_tensor = _get_levi_civita_array(2)
+    aux = sp.tensorproduct(e_tensor,grad)
+    return sp.tensorcontraction(sp.tensorcontraction(aux, (0,2)), (0,1))
 
 def tensor_vector_dot(a: sp.Array, b: sp.Array):
     assert a.rank()==1 and b.rank()==1
@@ -64,28 +101,9 @@ def tensor_mat_prod(a:sp.Array, b:sp.Array):
     assert a.rank()==2 and b.rank()==2
     return sp.tensorcontraction(sp.tensorproduct(a,b),(1,2))
 
-def tensor_mat_transpose(a:sp.Array):
-    assert a.rank()==2
-    return sp.permutedims(a,(1,0))
-
 def tensor_mat_vector_prod(a:sp.Array, b:sp.Array):
     assert a.rank()==2 and b.rank()==1
     return sp.tensorcontraction(sp.tensorproduct(a,b),(1,2))
-
-def _get_levi_civita_array(dim):
-    e = []
-    for i in range(dim):
-        e.append([])
-        for j in range(dim):
-            if dim==2:
-                e[-1].append(sp.LeviCivita(i, j))
-            elif dim==3:
-                e[-1].append([])
-                for k in range(dim):
-                    e[-1][-1].append(sp.LeviCivita(i, j, k))
-            else:
-                raise Exception("Only dimensions 2 or 3 accepted for Levi-Civita array generation")
-    return sp.Array(e)
 
 def tensor_mat_det(a:sp.Array):
     assert a.rank()==2 and a.shape[0]==a.shape[1]

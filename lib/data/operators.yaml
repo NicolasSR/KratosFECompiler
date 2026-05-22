@@ -1,6 +1,7 @@
 operators:
   dot_op:
     name: "Dot Product"
+    code_token: "dot"
     description: "Computes the dot product of two vectors."
     arity: 2
     latex: "{a} \\cdot {b}"
@@ -23,6 +24,7 @@ operators:
 
   norm_op:
     name: "Vector Norm"
+    code_token: "norm"
     description: "Computes the L2 norm of a vector."
     arity: 1
     latex: "\\lVert {a} \\rVert"
@@ -38,6 +40,7 @@ operators:
 
   contract_op:
     name: "Single Contraction of Tensors"
+    code_token: "contract"
     description: "Contracts one index between two tensors (last index of the first tensor and first index of the second tensor). For vectors, it is the dot product, for matrices, it is the matrix product."
     arity: 2
     latex: "{a} \\cdot {b}"
@@ -75,6 +78,7 @@ operators:
 
   doublecontract_op:
     name: "Double Contraction of Tensors"
+    code_token: "double_contract"
     description: "Contracts two indices between two tensors (last two indices of the first tensor and first two indices of the second tensor): a_i...jk b_jk...n."
     arity: 2
     latex: "{a} : {b}"
@@ -112,10 +116,12 @@ operators:
 
   grad_op:
     name: "Gradient of Tensor Field"
+    code_token: "grad"
     description: "Gradient of Tensor Field with respect to the reference coordinates defined in the system. Uses convention grad(f)_ij=df_j/dx_i."
     arity: 1
-    latex: "\nabla {a}"
+    latex: "\\nabla {a}"
     needs_parentheses_when_exp: true
+    pass_coords: true
     output:
       rank:
         op: "add"
@@ -124,3 +130,319 @@ operators:
         op: "concat"
         args: ["coords", "a"]
     implementation: "tensor_grad"
+    alternate_version:
+      transposed_gradients_flag:
+        name: "Gradient of Tensor Field (transposed)"
+        description: "Gradient of Tensor Field with respect to the reference coordinates defined in the system. Uses convention grad(f)_ij=df_i/dx_j."
+        output:
+          rank:
+            op: "add"
+            args: ["a", 1]
+          dim:
+            op: "concat"
+            args: ["a", "coords"]
+        implementation: "tensor_grad_transposed"
+
+  symgrad_op:
+    name: "Symmetric Gradient of Tensor Field"
+    code_token: "symgrad"
+    description: "Symmetric Gradient of Tensor Field with respect to the reference coordinates defined in the system. Uses convention symgrad(f)_ij=0.5*(df_j/dx_i + df_i/dx_j)."
+    arity: 1
+    latex: "\\nabla^{{sym}} {a}"
+    needs_parentheses_when_exp: true
+    pass_coords: true
+    constraints:
+      rank:
+        op: "eq"
+        args: ["a", 1]
+      dim:
+        op: "eq"
+        args: ["coords", "a"]
+    output:
+      rank:
+        op: "add"
+        args: ["a", 1]
+      dim:
+        op: "concat"
+        args: ["coords", "a"]
+    implementation: "tensor_symgrad"
+
+  div_op:
+    name: "Divergence of Tensor Field"
+    code_token: "div"
+    description: "Divergence of Tensor Field with respect to the reference coordinates defined in the system."
+    arity: 1
+    latex: "\\nabla^{{sym}} \\cdot {a}"
+    needs_parentheses_when_exp: true
+    pass_coords: true
+    constraints:
+      rank:
+        op: "ge"
+        args: ["a", 1]
+      dim:
+        op: "eq"
+        args:
+          - "coords"
+          - op: "slice"
+            args: ["a", 0, 1]
+    output:
+      rank:
+        op: "sub"
+        args: ["a", 1]
+      dim:
+        op: "slice"
+        args: ["a", 1, null]
+    implementation: "tensor_div"
+
+  curl_op:
+    name: "Curl of 3D Vector Field"
+    code_token: "curl"
+    description: "Curl of 3D Vector Field with respect to the reference coordinates defined in the system."
+    arity: 1
+    latex: "\\nabla \\times {a}"
+    needs_parentheses_when_exp: true
+    pass_coords: true
+    constraints:
+      rank:
+        op: "eq"
+        args: ["a", 1]
+      dim:
+        op: "and"
+        args:
+          - op: "eq"
+            args: ["a", 3]
+          - op: "eq"
+            args: ["coords", 3]
+    output:
+      rank: 1
+      dim: [3]
+    implementation: "tensor_3D_curl"
+
+  curl_2d_op:
+    name: "Scalar Curl of 2D Vector Field"
+    code_token: "curl_2d"
+    description: "Scalar Curl (or Vorticity) of 2D Vector Field with respect to the reference coordinates defined in the system."
+    arity: 1
+    latex: "\\nabla \\times {a}"
+    needs_parentheses_when_exp: true
+    pass_coords: true
+    constraints:
+      rank:
+        op: "eq"
+        args: ["a", 1]
+      dim:
+        op: "and"
+        args:
+          - op: "eq"
+            args: ["a", 2]
+          - op: "eq"
+            args: ["coords", 2]
+    output:
+      rank: 0
+      dim: "empty_list"
+    implementation: "tensor_2D_curl"
+
+  matrix_prod_op:
+    name: "Matrix Product"
+    code_token: "mat_prod"
+    description: "Matrix product of two matrices."
+    arity: 2
+    latex: "{a} {b}"
+    needs_parentheses_when_exp: true
+    constraints:
+      rank:
+        op: "and"
+        args:
+          - op: "eq"
+            args: ["a", 2]
+          - op: "eq"
+            args: ["b", 2]
+      dim:
+        op: "eq"
+        args:
+          - op: "slice"
+            args: ["a", 1, null]
+          - op: "slice"
+            args: ["b", 0, 1]
+    output:
+      rank: 2
+      dim:
+        op: "concat"
+        args:
+          - op: "slice"
+            args: ["a", 0, 1]
+          - op: "slice"
+            args: ["b", 1, null]
+    implementation: "tensor_mat_prod"
+
+  matrix_transpose_op:
+    name: "Matrix Transpose"
+    code_token: "transpose"
+    description: "Transpose of a matrix."
+    arity: 1
+    latex: "{a}^T"
+    needs_parentheses_when_exp: true
+    constraints:
+      rank:
+        op: "eq"
+        args: ["a", 2]
+    output:
+      rank: 2
+      dim:
+        op: "concat"
+        args:
+          - op: "slice"
+            args: ["a", 1, null]
+          - op: "slice"
+            args: ["a", 0, 1]
+    implementation: "tensor_mat_transpose"
+
+  matrix_vector_prod_op:
+    name: "Matrix Vector Product"
+    code_token: "mat_vec_prod"
+    description: "Matrix vector product of a matrix and a vector. Specifically: b = Ax. For b^T = x^T A, the user may just use a single contract operation"
+    arity: 2
+    latex: "{a} {b}"
+    needs_parentheses_when_exp: true
+    constraints:
+      rank:
+        op: "and"
+        args:
+          - op: "eq"
+            args: ["a", 2]
+          - op: "eq"
+            args: ["b", 1]
+      dim:
+        op: "eq"
+        args:
+          - op: "slice"
+            args: ["a", 1, null]
+          - op: "b"
+    output:
+      rank: 1
+      dim:
+        op: "slice"
+        args: ["a", 0, 1]
+    implementation: "tensor_mat_vector_prod"
+
+  matrix_det_op:
+    name: "Matrix Determinant"
+    code_token: "mat_det"
+    description: "Determinant of a matrix."
+    arity: 1
+    latex: "|{a}|"
+    needs_parentheses_when_exp: false
+    constraints:
+      rank:
+        op: "eq"
+        args: ["a", 2]
+      dim:
+        op: "eq"
+        args:
+          - op: "slice"
+            args: ["a", 0, 1]
+          - op: "slice"
+            args: ["a", 1, null]
+    output:
+      rank: 0
+      dim: "empty_list"
+    implementation: "tensor_mat_det"
+
+  matrix_inv_op:
+    name: "Matrix Inverse"
+    code_token: "mat_inv"
+    description: "Inverse of a matrix."
+    arity: 1
+    latex: "{a}^{-1}"
+    needs_parentheses_when_exp: true
+    constraints:
+      rank:
+        op: "eq"
+        args: ["a", 2]
+      dim:
+        op: "eq"
+        args:
+          - op: "slice"
+            args: ["a", 0, 1]
+          - op: "slice"
+            args: ["a", 1, null]
+    output:
+      rank: 2
+      dim: "a"
+    implementation: "tensor_mat_inv"
+
+  matrix_cofactor_op:
+    name: "Matrix Cofactor"
+    code_token: "mat_cofactor"
+    description: "Cofactor of a matrix."
+    arity: 1
+    latex: "\\text{Cof}({a})"
+    needs_parentheses_when_exp: false
+    constraints:
+      rank:
+        op: "eq"
+        args: ["a", 2]
+      dim:
+        op: "eq"
+        args:
+          - op: "slice"
+            args: ["a", 0, 1]
+          - op: "slice"
+            args: ["a", 1, null]
+    output:
+      rank: 2
+      dim: "a"
+    implementation: "tensor_mat_cofactor"
+
+  vector_cross_prod_op:
+    name: "Vector Cross Product"
+    code_token: "cross_prod"
+    description: "Cross product of two vectors."
+    arity: 2
+    latex: "{a} \\times {b}"
+    needs_parentheses_when_exp: true
+    constraints:
+      rank:
+        op: "and"
+        args:
+          - op: "eq"
+            args: ["a", 1]
+          - op: "eq"
+            args: ["b", 1]
+      dim:
+        op: "and"
+        args:
+          - op: "eq"
+            args: ["a", 3]
+          - op: "eq"
+            args: ["b", 3]
+    output:
+      rank: 1
+      dim: [3]
+    implementation: "tensor_vec_cross_prod"
+
+  vector_outer_prod_op:
+    name: "Vector Outer Product"
+    code_token: "vec_outer_prod"
+    description: "Outer product of two vectors."
+    arity: 2
+    latex: "{a} \\otimes {b}"
+    needs_parentheses_when_exp: true
+    constraints:
+      rank:
+        op: "and"
+        args:
+          - op: "eq"
+            args: ["a", 1]
+          - op: "eq"
+            args: ["b", 1]
+    output:
+      rank: 2
+      dim:
+        op: "concat"
+        args:
+          - op: "slice"
+            args: ["a", 0, 1]
+          - op: "slice"
+            args: ["b", 0, 1]
+    implementation: "tensor_vec_outer_prod"

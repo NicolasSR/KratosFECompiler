@@ -7,6 +7,8 @@ from sympy import NDimArray
 
 from lib.components_utils import get_flat_list_of_components
 from lib.printers import CustomLatexPrinter
+from lib.utilities import substitute_all_placeholders_in_expression, substitute_all_arrays_in_expression
+
 from lib.coordinates_system import ACTIVE_COORD_SYSTEM
 
 def check_if_scalar(arg):
@@ -269,7 +271,16 @@ class BaseTensorPlaceholder(sp.Expr):
             raise ValueError(f'Dimensions {dim} for {name} are not compatible with rank {rank}.')
         dependencies = info_dict['dependencies']
         latex_str = info_dict.get('latex', name)
-        return sp.Expr.__new__(cls, name, rank, dim, dependencies, latex_str)
+        flags = []
+        if info_dict.get('symmetric', False):
+            flags.append('symmetric')
+        if info_dict.get('third_symmetry', False):
+            flags.append('third_symmetry')
+        if info_dict.get('use_voigt_notation', False):
+            flags.append('voigt')
+        if info_dict.get('positive', False):
+            flags.append('positive')
+        return sp.Expr.__new__(cls, name, rank, dim, dependencies, latex_str, flags)
     
     # Then we create accessors for those properties.
     @property
@@ -291,6 +302,10 @@ class BaseTensorPlaceholder(sp.Expr):
     @property
     def latex_str(self):
         return self.args[4]
+    
+    @property
+    def flags(self):
+        return self.args[5]
         
     def substitute_components_simulatneous(self, expr, original, new):
         original_iterator = get_flat_list_of_components(original)
@@ -337,21 +352,56 @@ class BaseTensorPlaceholder(sp.Expr):
         return sp.pretty_form.PrettyString(self.name)
     
     def __repr__(self):
-        return f"BaseTensorPlaceholder({self.name}, dim={self.dim}, rank={self.rank})"
+        class_name = self.__class__.__name__
+        return f"{class_name}({self.name}, dim={self.dim}, rank={self.rank})"
 
     def __format__(self, format_spec: str):
         # This forces f-strings to use your __str__ method, 
         # and then apply standard string formatting on top of that.
         return sp.sstr(self).__format__(format_spec)
     
-    ## TO BE DELETED
-    def generate_array(self):
-        self.array_name = self.name+'_array'
-        dependencies_list = ACTIVE_COORD_SYSTEM.get()["coord_symbols"]
+    def _fill_array_rank2(self, base_name, dependencies_list):
+        out_array = sp.MutableDenseNDimArray(sp.zeros(self.dim**2),shape=(self.dim,self.dim))
+        for i in range(self.dim):
+            for j in range(self.dim):
+                if "symmetric" in self.flags:
+                    indexes_string = '_'+str(min(i,j))+'_'+str(max(i,j)) # Apply symmetry
+                else:
+                    indexes_string = '_'+str(i)+'_'+str(j)
+                out_array[i,j] = sp.Function(base_name+indexes_string)(*dependencies_list)
+        return out_array
+    
+    def _fill_array_rank4(self, base_name, dependencies_list):
+        out_array = sp.MutableDenseNDimArray(sp.zeros(self.dim**4),shape=(self.dim,self.dim,self.dim,self.dim))
+        for i in range(self.dim):
+            for j in range(self.dim):
+                for k in range(self.dim):
+                    for l in range(self.dim):
+                        unique_index = [min(i,j), max(i,j), min(k,l), max(k,l)] # Apply first two symmetries
+                        if "third_symmetry" in self.flags:
+                            if unique_index[0] > unique_index[2]:
+                                unique_index = [unique_index[2],unique_index[3],unique_index[0],unique_index[1]]
+                            elif unique_index[0] == unique_index[2]:
+                                if unique_index[1] > unique_index[3]:
+                                    unique_index = [unique_index[2],unique_index[3],unique_index[0],unique_index[1]]
+                        indexes_string=''
+                        for index in unique_index:
+                            indexes_string += '_'+str(index)
+                        out_array[i,j,k,l] = sp.Function(base_name+indexes_string)(*dependencies_list)
+        return out_array
+    
+    def _generate_functions_array(self, base_name, dependencies_list):
         if self.rank == 0:
-            self.array = sp.Function(self.array_name)(*dependencies_list)
-        if self.rank == 1:
-            self.array = sp.Array([sp.Function(self.array_name+'_'+str(i))(*dependencies_list) for i in range(self.dim[0])])
+            return sp.Function(base_name)(*dependencies_list)
+        elif self.rank == 1:
+            return sp.Array([sp.Function(base_name+'_'+str(i))(*dependencies_list) for i in range(self.dim[0])])
+        elif self.rank == 2:
+            return self._fill_array_rank2(*dependencies_list)
+        elif self.rank == 4:
+            return self._fill_array_rank4(*dependencies_list)
+        else:
+            raise NotImplementedError(f"Rank {self.rank} not implemented yet for _generate_functions_array() in BaseTensorPlaceholder")
+
 
 class VarsCombination(sp.Expr):
 
@@ -361,15 +411,21 @@ class VarsCombination(sp.Expr):
     def is_Atom(self):
         return False
     
-    # We assign the properties of the placeholder as arguments of the sympy expression.
     def __new__(cls, *components):
         for comp in components:
             if not isinstance(comp, sp.Basic):
                 raise TypeError(f"Cannot include {comp} in a VarsCombination, as  it is not a Sympy object")
         return sp.Expr.__new__(cls, *components)
+    
+    @classmethod
+    def from_namespace(cls, args, namespace):
+        # Initialize a VarsCombination based on a list of names and a namespace
+        components = [namespace[name] for name in args]
+        return cls(*components)
+
 
     def evaluate(self):
-        # Return array of flattened components. We assime everything inside will be either NDimArrays or Functions or Symbols
+        # Return array of flattened components. We assume everything inside will be either NDimArrays or Functions or Symbols
         flattened_components = []
         for arg in self:
             if isinstance(arg, sp.NDimArray):
@@ -380,6 +436,30 @@ class VarsCombination(sp.Expr):
             else:
                 flattened_components.append(arg)
         return sp.Array(flattened_components)
+    
+    @property
+    def rank(self):
+        return 1
+    
+    @property
+    def dim(self):
+        total_dims = 0
+        for arg in self.args:
+            if isinstance(arg, BaseTensorPlaceholder):
+                res = 1
+                for val in arg.dim:
+                    res = res * val
+                total_dims += res
+            elif isinstance(arg, sp.NDimArray):
+                res = 1
+                for val in arg.shape:
+                    res = res * val
+                total_dims += res
+            elif isinstance(arg, sp.Symbol) or isinstance(arg, sp.Function):
+                total_dims += 1
+            else:
+                raise Exception(f"Object {arg} within VarsCombination is not recognized")
+        return [total_dims]
     
     def __len__(self):
         return len(self.args)
@@ -395,59 +475,49 @@ class VarsCombination(sp.Expr):
             return out
         raise StopIteration
     
-    
+    def get_tuple_string(self, printer=None):
+        out_str = '('
+        for var in self.vars_objects:
+            if isinstance(var,BaseTensorPlaceholder):
+                out_str += var.latex_str+','
+            elif printer is not None:
+                out_str += printer._print(var)+','
+            else:
+                out_str += str(var)+','
+        out_str = out_str[:-1]+')'
 
-# class VarsCombination():
-#     def __init__(self, *args):
-#         self.vars_symbols = list(args)
-#         self.vars_objects = []
+    def get_names_list(self):
+        return self.vars_symbols
+    
+    def discretize_expression(self, placeholder_names_list, namespace):
+        expr = substitute_all_placeholders_in_expression(self, placeholder_names_list, namespace)
+        expr = expr.evaluate()
+        expr = substitute_all_arrays_in_expression(expr, placeholder_names_list, namespace)
+        return expr
+    
+    def __repr__(self):
+        return "VarsCombination("+",".join([repr(arg) for arg in self.args])+")"
 
-#     def update_symbol_objects(self, SYMB):
-#         self.vars_objects = [SYMB[name] for name in self.vars_symbols]
-        
-#     def get_tuple_string(self, printer=None):
-#         out_str = '('
-#         for var in self.vars_objects:
-#             if isinstance(var,BaseTensorPlaceholder):
-#                 out_str += var.latex_str+','
-#             elif printer is not None:
-#                 out_str += printer._print(var)+','
-#             else:
-#                 out_str += str(var)+','
-#         out_str = out_str[:-1]+')'
+class CoefficientsIndicator(VarsCombination):
 
-#         return out_str
+    def __new__(cls, *components):
+        for comp in components:
+            if not isinstance(comp, BaseTensorPlaceholder) and not comp.__cls___.__name__ in ['NodalTensorPlaceholder','UnknownTensorPlaceholder']:
+                raise TypeError(f"Cannot include {comp} in a VarsCombination, as  it is not a NodalTensorPlaceholder or UnknownTensorPlaceholder")
+        return sp.Expr.__new__(cls, *components)
     
-#     def get_names_list(self):
-#         return self.vars_symbols
-    
-#     def get_dependency_list_array(self, SYMB, name_complement):
-#         return self.get_flat_objects_list(SYMB, name_complement)
-    
-#     def get_dependency_list_array_or_matrix(self, SYMB, name_complement):
-#         return self.get_flat_objects_list(SYMB, name_complement)
+    def evaluate(self):
+        raise NotImplementedError("CoefficientsIndicator does not implement evaluate()")
 
-#     def get_flat_objects_list(self, SYMB, name_complement):
-#         out = []
-#         for symbol in self.vars_symbols:
-#             array = SYMB[symbol+name_complement]
-#             out.extend(get_flat_list_of_components(array))
-#         return tuple(out)
-    
-#     def get_array(self):
-#         return sp.Array(self.vars_objects)
-    
-class DofsIndicator(VarsCombination):
-    
-    def get_dependency_list_array_or_matrix(self, SYMB, name_complement=''):
+    def discretize_expression(self, placeholder_names_list, namespace):
         out = []
-        nnodes = SYMB[self.vars_symbols[0]+'_nodes'].shape[0]
-        for node in range(nnodes):
-            for symbol in self.vars_symbols:
-                assert SYMB[symbol+'_nodes'].shape[0]==nnodes
-                array = SYMB[symbol+'_nodes'][node,:]
-                out.extend(get_flat_list_of_components(array))
-        return tuple(out)
+        for var in self.args:
+            out.extend(get_flat_list_of_components(var.nodes))
+        return out
+    
+    def __repr__(self):
+        return "CoefficientsIndicator("+",".join([repr(arg) for arg in self.args])+")"
+    
     
 class DerivIndicator():
     def __init__(self, function, vars):
@@ -464,19 +534,24 @@ class DerivIndicator():
             raise "Only acceptable formats for derivative denominator are string, VarsCombination() or DofsIndicator()"
         return out
 
-    def get_deriv_name(self):
-        return '_'.join(self.get_args_names_list())+'_deriv'
+    # def get_deriv_name(self):
+    #     return '_'.join(self.get_args_names_list())+'_deriv'
     
-    def get_derivative_iterator(self, SYMB, name_complement, transposed):
-        numerator_iterator = get_flat_list_of_components(SYMB[self.function_symbol+name_complement])
-        if isinstance(self.vars_symbol, DofsIndicator):
-            denominator_iterator = self.vars_symbol.get_dependency_list_array_or_matrix(SYMB)
-        elif isinstance(self.vars_symbol, VarsCombination):
-            denominator_iterator = self.vars_symbol.get_objects_list(SYMB, name_complement)
-        elif isinstance(self.vars_symbol,str):
-            denominator_iterator = get_flat_list_of_components(SYMB[self.vars_symbol+name_complement])
+    def get_derivative_iterator_pre_lhs(self, placeholder_names_list, namespace):
+        numerator_expression = substitute_all_placeholders_in_expression(namespace[self.function_symbol], placeholder_names_list, namespace)
+        numerator_iterator = get_flat_list_of_components(numerator_expression)
+        if isinstance(self.vars_symbol,str):
+            if self.vars_symbol == "base_scalars":
+                self.vars_symbol = ACTIVE_COORD_SYSTEM.get()["coord_symbols"]
+            else:
+                array = substitute_all_placeholders_in_expression(namespace[self.vars_symbol], placeholder_names_list, namespace)
+                denominator_iterator = array.evaluate()
+        if isinstance(self.vars_symbol, VarsCombination):
+            array_vars_combination = substitute_all_placeholders_in_expression(self.vars_symbol, placeholder_names_list, namespace)
+            denominator_iterator = array_vars_combination.evaluate()
+        
         derivatives_list = []
-        if transposed:
+        if ACTIVE_COORD_SYSTEM.get()["transposed_gradients_flag"]:
             for numerator in numerator_iterator:
                 for denominator in denominator_iterator:
                     derivatives_list.append(sp.Derivative(numerator,denominator))
@@ -486,19 +561,27 @@ class DerivIndicator():
                     derivatives_list.append(sp.Derivative(numerator,denominator))
         return derivatives_list
     
-    def get_derivative_iterator_with_substitutions(self,SYMB, name_complement, transposed, subs_function):
-        numerator_iterator_aux = get_flat_list_of_components(SYMB[self.function_symbol+name_complement])
-        numerator_iterator = [subs_function(numerator_elem_aux) for numerator_elem_aux in numerator_iterator_aux]
-        if isinstance(self.vars_symbol, DofsIndicator):
-            denominator_iterator = self.vars_symbol.get_dependency_list_array_or_matrix(SYMB)
-        elif isinstance(self.vars_symbol, VarsCombination):
-            denominator_iterator_aux = self.vars_symbol.get_objects_list(SYMB, name_complement)
-            denominator_iterator = [subs_function(denominator_elem_aux) for denominator_elem_aux in denominator_iterator_aux]
-        elif isinstance(self.vars_symbol,str):
-            denominator_iterator_aux = get_flat_list_of_components(SYMB[self.vars_symbol+name_complement])
-            denominator_iterator = [subs_function(denominator_elem_aux) for denominator_elem_aux in denominator_iterator_aux]
+    def get_derivative_iterator_post_lhs(self, placeholder_names_list, namespace):
+        numerator_expression = substitute_all_placeholders_in_expression(namespace[self.function_symbol], placeholder_names_list, namespace)
+        if not (isinstance(numerator_expression, sp.NDimArray) or isinstance(numerator_expression, sp.Function)):
+                    numerator_expression = numerator_expression.evaluate()
+        numerator_expression = substitute_all_arrays_in_expression(numerator_expression, placeholder_names_list, namespace)
+        numerator_iterator = get_flat_list_of_components(numerator_expression)
+        if isinstance(self.vars_symbol,str):
+            if self.vars_symbol == "base_scalars":
+                raise ValueError("Cannot differentiate with respect to base_scalars in post-LHS substitution")
+            else:
+                denominator_expression = substitute_all_placeholders_in_expression(namespace[self.function_symbol], placeholder_names_list, namespace)
+                if not (isinstance(denominator_expression, sp.NDimArray) or isinstance(denominator_expression, sp.Function)):
+                    denominator_expression = denominator_expression.evaluate()
+                denominator_expression = substitute_all_arrays_in_expression(denominator_expression, placeholder_names_list, namespace)
+                denominator_iterator = get_flat_list_of_components(denominator_expression)
+        if isinstance(self.vars_symbol, VarsCombination):
+            denominator_expression = self.vars_symbol.discretize_expression(placeholder_names_list, namespace)
+            denominator_iterator = get_flat_list_of_components(denominator_expression)
+        
         derivatives_list = []
-        if transposed:
+        if ACTIVE_COORD_SYSTEM.get()["transposed_gradients_flag"]:
             for numerator in numerator_iterator:
                 for denominator in denominator_iterator:
                     derivatives_list.append(sp.Derivative(numerator,denominator))
@@ -507,6 +590,32 @@ class DerivIndicator():
                 for numerator in numerator_iterator:
                     derivatives_list.append(sp.Derivative(numerator,denominator))
         return derivatives_list
+    
+    def __repr__(self):
+        return "DerivIndicator("+self.function_symbol+","+self.vars_symbol+")"
+    
+    # def get_derivative_iterator_for_gauss(self, namespace):
+    #     numerator_iterator_aux = get_flat_list_of_components(namespace[self.function_symbol])
+    #     numerator_iterator = [numerator_elem_aux.array for numerator_elem_aux in numerator_iterator_aux]
+    #     if isinstance(self.vars_symbol, DofsIndicator):
+    #         denominator_iterator = self.vars_symbol.get_dependency_list_array_or_matrix(SYMB)
+    #     elif isinstance(self.vars_symbol, VarsCombination):
+    #         denominator_iterator_aux = self.vars_symbol.get_objects_list(SYMB, name_complement)
+    #         denominator_iterator = [subs_function(denominator_elem_aux) for denominator_elem_aux in denominator_iterator_aux]
+    #     elif isinstance(self.vars_symbol,str):
+    #         denominator_iterator_aux = get_flat_list_of_components(SYMB[self.vars_symbol+name_complement])
+    #         denominator_iterator = [subs_function(denominator_elem_aux) for denominator_elem_aux in denominator_iterator_aux]
+    #     derivatives_list = []
+    #     if transposed:
+    #         for numerator in numerator_iterator:
+    #             for denominator in denominator_iterator:
+    #                 derivatives_list.append(sp.Derivative(numerator,denominator))
+    #     else:
+    #         for denominator in denominator_iterator:
+    #             for numerator in numerator_iterator:
+    #                 derivatives_list.append(sp.Derivative(numerator,denominator))
+    #     return derivatives_list
+    
 
 # ## Define tensorplaceholder-compatible versions of most basic operators
 

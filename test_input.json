@@ -14,27 +14,41 @@
     },
     "functional_ssa": [
         {"name": "aux_1", "AST":{
-            "op": "doublecontract_op",
+            "op": "doublecontract",
             "args": [
                 {
-                    "op": "grad_op",
-                    "args": ["v"]
-                },{
-                    "op": "grad_op",
+                    "op": "symgrad",
                     "args": ["w"]
+                },{
+                    "op": "vec_outer_prod",
+                    "args": ["v", "w"]
                 }]
         }},
         {"name": "aux_2", "AST":{
             "op": "add",
             "args": [
                 "p",
-                {"op": "norm_op", "args": ["w"]},
+                {
+                    "op": "div",
+                    "args": ["v"]
+                },
                 2
             ]
         }},
         {"name": "functional_rhs", "AST":{
             "op": "add",
             "args": ["aux_1", "aux_2"]
+        }},
+        {"name": "functional_lhs", "AST":{
+            "op": "add",
+            "args": ["aux_1", "aux_2"]
         }}
-    ]
+    ],
+    "substitutions": {
+        "pre_lhs": [],
+        "post_lhs": [[{"op":"array", "args": ["w"]}, {"op":"deriv", "args": ["p","base_scalars"]}]],
+        "trash": [
+            [{"op":"array", "args": ["v"]}, {"op":"array", "args": ["w"]}]
+        ]
+    }
 }

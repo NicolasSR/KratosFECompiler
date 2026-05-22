@@ -7,6 +7,8 @@ from lib.kratos_utilities import DfjDxi
 from lib.printers import CustomLatexPrinter
 from lib.utilities import substitute_symbols, substitute_functions
 
+from lib.coordinates_system import ACTIVE_COORD_SYSTEM
+
 VOIGT_INDEX_DICT = {
     2: [[0,0],[1,1],[0,1]],
     # 3: [[0,0],[1,1],[2,2],[1,2],[0,2],[0,1]] # Standard Voigt notation
@@ -24,7 +26,62 @@ def disambiguate_var_group(var_group, SYMB):
         return var_group
     else:
         raise ValueError("Invalid input type for disambiguate_var_group()")
+    
+class NodalTensorPlaceholder(BaseTensorPlaceholder):
+    array_name_complement = '_array'
+    nodes_name_complement = '_nodes'
+    gauss_name_complement = '_gauss'
 
+    def __new__(cls, info_dict):
+        if info_dict["tensor_rank"] >= 2:
+            raise NotImplementedError("Only nodal functions of tensor rank 0 and 1 are supported.")
+        return super().__new__(cls, info_dict)
+
+    @property
+    def array(self):
+        array_name = self.name+self.array_name_complement
+        return self._generate_functions_array(array_name, self.dependencies)
+    
+    @property
+    def deriv_array(self):
+        return sp.derive_by_array(self.array, self.dependencies)
+    
+    @property
+    def nodes(self):
+        N = ACTIVE_COORD_SYSTEM.get()["N"]
+        nnodes = N.shape[0]
+        nodes_name = self.name+self.nodes_name_complement
+        if self.rank==0:
+            return DefineVector(nodes_name,nnodes)
+        elif self.rank==1:
+            return DefineMatrix(nodes_name,nnodes,self.dim[0])
+    
+    @property
+    def gauss(self):
+        N = ACTIVE_COORD_SYSTEM.get()["N"]
+        return self.nodes.transpose()*N
+    
+    @property
+    def deriv_gauss(self):
+        DN = ACTIVE_COORD_SYSTEM.get()["DN"]
+        return DfjDxi(DN,self.nodes)
+    
+    def substitute_arrays_to_gauss(self,expr):
+        # Substitute derivative first
+        expr = self.substitute_components_simulatneous(expr, self.deriv_array, self.deriv_gauss)
+        # Substitute unknown
+        if self.rank==0:
+            expr = expr.subs(self.array, self.gauss[0,0])
+        elif self.rank==1:
+            expr = self.substitute_components_simulatneous(expr, self.array, self.gauss)
+        return expr
+    
+class UnknownTensorPlaceholder(NodalTensorPlaceholder):
+    pass
+    # def __new__(cls, info_dict):
+    #     return super().__new__(cls, info_dict)
+
+"""
 class FunctionTensorPlaceholder(BaseTensorPlaceholder):
     array_name_complement = '_array'
     gauss_name_complement = '_gauss'
@@ -96,16 +153,7 @@ class FunctionTensorPlaceholderRank2(FunctionTensorPlaceholder):
         self.gauss = self.fill_array(dependencies_list)
         SYMB[self.gauss_name] = self.gauss
     
-    def fill_array(self, dependencies_list):
-        out_array = sp.MutableDenseNDimArray(sp.zeros(self.dim**2),shape=(self.dim,self.dim))
-        for i in range(self.dim):
-            for j in range(self.dim):
-                if self.flag_symmetric:
-                    indexes_string = '_'+str(min(i,j))+'_'+str(max(i,j)) # Apply symmetry
-                else:
-                    indexes_string = '_'+str(i)+'_'+str(j)
-                out_array[i,j] = sp.Function(self.array_name+indexes_string)(*dependencies_list)
-        return out_array
+
 
 class FunctionTensorPlaceholderRank4(FunctionTensorPlaceholder):
     rank = 4
@@ -386,3 +434,5 @@ class DefinedFunctionPlaceholder(BaseTensorPlaceholder):
 
     def substitute_gauss(self, expr):
         pass
+        
+"""

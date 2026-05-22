@@ -29,3 +29,14 @@ def substitute_functions(input_string):
     for old, new in substitutions_list:
         input_string = input_string.replace(old, new)
     return input_string
+
+def substitute_all_placeholders_in_expression(expr, placeholder_names_list, namespace):
+    subst_list = [( namespace[name],  namespace[name].array) for name in placeholder_names_list] 
+    expr = expr.subs(subst_list, evaluate=False)
+    return expr
+
+def substitute_all_arrays_in_expression(expr, placeholder_names_list, namespace):
+    for placeholder_name in reversed(placeholder_names_list):
+        placeholder = namespace[placeholder_name]
+        expr = placeholder.substitute_arrays_to_gauss(expr)
+    return expr

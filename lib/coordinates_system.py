@@ -5,12 +5,13 @@ from lib.kratos_utilities import DefineShapeFunctions
 ACTIVE_COORD_SYSTEM = contextvars.ContextVar("ACTIVE_COORD_SYSTEM", default=None)
 
 class CoordinateSystem():
-    def __init__(self, coord_symbols, nnodes, impose_partion_of_unity):
+    def __init__(self, coord_symbols, nnodes, impose_partion_of_unity, transposed_gradients_flag=False):
         N,DN = DefineShapeFunctions(nnodes, len(coord_symbols), impose_partion_of_unity)
         self.coord_system = {
             "coord_symbols": coord_symbols,
             "N": N,
-            "DN": DN
+            "DN": DN,
+            "transposed_gradients_flag": transposed_gradients_flag
         }
         self.coord_token = None
         
