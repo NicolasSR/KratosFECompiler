@@ -14,15 +14,7 @@ def main(options_dict):
 
     ## Symbolic generation settings
     dim = options_dict["dim"]
-
-    # Define further options based on formulation
-    if dim == 2:
-        nnodes = 3
-    elif dim == 3:
-        nnodes = 4
-    else:
-        err_msg = "Incompatible number of dimensions: " + str(dim)
-        raise Exception(err_msg)
+    nnodes = options_dict["nnodes"]
     
     # Input for compiler
 

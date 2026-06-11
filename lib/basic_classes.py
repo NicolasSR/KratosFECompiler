@@ -1,23 +1,59 @@
 from functools import reduce
 import operator
-import itertools
+import importlib
 
 import sympy as sp
 from sympy import NDimArray
 
 from lib.components_utils import get_flat_list_of_components
 from lib.printers import CustomLatexPrinter
-from lib.utilities import substitute_all_placeholders_in_expression, substitute_all_arrays_in_expression
+from lib.yaml_utils import evaluate_yaml_operators_tree
 
 from lib.coordinates_system import ACTIVE_COORD_SYSTEM
+from lib.registry import load_operators
+
+OPERATORS_CONFIG = load_operators() # Load operator definitions from YAML
 
 def check_if_scalar(arg):
     return  str(sp.sympify(arg).kind) == "NumberKind" or isinstance(arg, sp.Function)
+
+def check_if_placeholder_or_deferred(arg):
+    return isinstance(arg, (BaseTensorPlaceholder, DeferredArithmetic, DeferredTensorOp))
+
+class CompilerNamespace(dict):
+    def __getitem__(self, key):
+        # Intercept base_scalars key to dynamically return the value from ACTIVE_COORD_SYSTEM
+        if key == "base_scalars":
+            if ACTIVE_COORD_SYSTEM.get() is None:
+                raise Exception("No active coordinate system.")
+            else:
+                return ACTIVE_COORD_SYSTEM.get()["coord_symbols"]
+        
+        # Fall back to normal dictionary behavior for everything else
+        return super().__getitem__(key)
 
 class DeferredArithmetic(sp.Expr):
     """
     Common base class for DeferredAdd and DeferredMul, to handle arithmetics and printing.
     """
+
+    _op_priority = 100 # Give a vey high priority so deferred arithmetic operations are used whnever a  deferred operation is encountered (in left or right)
+
+    @staticmethod
+    def _get_ranks_list(args):
+        ranks = []
+        for arg in args:
+            if check_if_scalar(arg):
+                ranks.append(0)
+            elif isinstance(arg, NDimArray):
+                dim_aux = list(arg.shape)
+                if sum(dim_aux) == 1:
+                    ranks.append(0)
+                else:
+                    ranks.append(arg.rank())
+            else:
+                ranks.append(getattr(arg, 'rank', None))
+        return ranks
 
     # Algebraic operators
 
@@ -29,6 +65,9 @@ class DeferredArithmetic(sp.Expr):
         # return add_op(other, self)
         return DeferredAdd(other, self)
     
+    def __neg__(self):
+        return DeferredNegative(self)
+    
     def __mul__(self, other):
         # return prod_op(self, other)
         return DeferredMul(self, other)
@@ -36,6 +75,45 @@ class DeferredArithmetic(sp.Expr):
     def __rmul__(self, other):
         # return prod_op(other, self)
         return DeferredMul(other, self)
+    
+    def __truediv__(self, other):
+        return DeferredDivide(self, other)
+    
+    def __rtruediv__(self, other):
+        return DeferredDivide(other, self)
+    
+    def __pow__(self, other):
+        return DeferredPow(self, other)
+    
+    def __rpow__(self, other):
+        return DeferredPow(other, self)
+    
+    # Make it into an iterator (for correct behaviour of iterargs in .has(), etc.)
+    def __len__(self):
+        return len(self.args)
+    
+    def __iter__(self):
+        self.count = 0
+        return self
+
+    def __next__(self):
+        if self.count < len(self):
+            out = self.args[self.count]
+            self.count += 1
+            return out
+        raise StopIteration
+    
+    def _evaluate(self, fun_array, class_scalar):
+        # Recursively evaluate children first
+        evaluated_args = [arg.evaluate() if hasattr(arg, 'evaluate') else arg 
+                          for arg in self.args]
+        
+        if any([check_if_placeholder_or_deferred(evaluated_arg) for evaluated_arg in evaluated_args]):
+            return self
+        elif any([isinstance(evaluated_arg, NDimArray) for evaluated_arg in evaluated_args]):
+            return fun_array(*evaluated_args) # Let SymPy handle array power
+        else:
+            return class_scalar(*evaluated_args) # Fallback to standard SymPy for scalars
     
     # Printing
     
@@ -83,7 +161,7 @@ class DeferredAdd(DeferredArithmetic):
         base = new_args[0]
         if check_if_scalar(base):
             ref_rank = 0
-            ref_dim = None
+            ref_dim = []
         elif isinstance(base, NDimArray):
             dim_aux = list(base.shape)
             if sum(dim_aux) == 1:
@@ -104,7 +182,7 @@ class DeferredAdd(DeferredArithmetic):
             # If we are dealing with a standard scalar symbol, assign rank 0
             if check_if_scalar(arg):
                 arg_rank = 0
-                arg_dim = None
+                arg_dim = []
             elif isinstance(arg, NDimArray):
                 dim_aux = list(arg.shape)
                 if sum(dim_aux) == 1:
@@ -145,7 +223,11 @@ class DeferredAdd(DeferredArithmetic):
         if check_if_scalar(self.args[0]):
             return []
         elif isinstance(self.args[0], NDimArray):
-            return list(self.args[0].shape)
+            dim_aux = list(self.args[0].shape)
+            if sum(dim_aux) == 1:
+                return []
+            else:
+                return dim_aux
         elif hasattr(self.args[0],'dim'):
             return self.args[0].dim
         else:
@@ -156,38 +238,14 @@ class DeferredAdd(DeferredArithmetic):
         return DeferredAdd(*[arg.subs(old, new) if hasattr(arg, 'subs') else arg for arg in self.args])
     
     def evaluate(self):
-        # Recursively evaluate children first
-        evaluated_args = [arg.evaluate() if hasattr(arg, 'evaluate') else arg 
-                          for arg in self.args]
-        
-        if any(isinstance(a, BaseTensorPlaceholder) for a in evaluated_args):
-            return self
-        elif any(isinstance(a, NDimArray) for a in evaluated_args):
-            # return sum(evaluated_args) # Let SymPy handle array addition
-            return reduce(operator.add, evaluated_args)
-        else:
-            return sp.Add(*evaluated_args) # Fallback to standard SymPy for scalars
+        def fun_array(*args):
+            return reduce(operator.add, args)
+        return self._evaluate(fun_array, sp.Add)
         
         
 class DeferredMul(DeferredArithmetic):
     operator = "*"
     latex_operator = " "
-
-    @staticmethod
-    def _get_ranks_list(args):
-        ranks = []
-        for arg in args:
-            if check_if_scalar(arg):
-                ranks.append(0)
-            elif isinstance(arg, NDimArray):
-                dim_aux = list(arg.shape)
-                if sum(dim_aux) == 1:
-                    ranks.append(0)
-                else:
-                    ranks.append(arg.rank())
-            else:
-                ranks.append(getattr(arg, 'rank', None))
-        return ranks
 
     def __new__(cls, *args):
         # Flatten nested DeferredMul instances
@@ -222,7 +280,7 @@ class DeferredMul(DeferredArithmetic):
                     return []
                 else:
                     return dim_aux
-            elif hasattr(arg,'dim') and arg.dim is not None:
+            elif hasattr(arg,'dim') and len(arg.dim) > 0:
                 return arg.dim
         return []
             
@@ -232,16 +290,177 @@ class DeferredMul(DeferredArithmetic):
         return DeferredMul(*[arg.subs(old, new) if hasattr(arg, 'subs') else arg for arg in self.args])
     
     def evaluate(self):
-        # Recursively evaluate children first
-        evaluated_args = [arg.evaluate() if hasattr(arg, 'evaluate') else arg 
-                          for arg in self.args]
+        def fun_array(*args):
+            return sp.prod(args)
+        return self._evaluate(fun_array, sp.Mul)
         
-        if any(isinstance(a, BaseTensorPlaceholder) for a in evaluated_args):
-            return self
-        elif any(isinstance(a, NDimArray) for a in evaluated_args):
-            return sp.prod(evaluated_args) # Let SymPy handle array multiplication
+class DeferredNegative(DeferredArithmetic):
+
+    def __new__(cls, *args):
+        if len(args) != 1:
+            raise ValueError("Unary minus expects exactly one argument")
+        return sp.Expr.__new__(cls, *args)
+    
+    @property
+    def rank(self):
+        # Rank of the only argument
+        if check_if_scalar(self.args[0]):
+            return 0
+        elif isinstance(self.args[0], NDimArray):
+            return self.args[0].rank()
+        elif hasattr(self.args[0],'rank'):
+            return self.args[0].rank
         else:
-            return sp.Mul(*evaluated_args) # Fallback to standard SymPy for scalars
+            raise TypeError("Rank of first argument not found")
+        
+    @property
+    def dim(self):
+        # Dim of the only argument
+        if check_if_scalar(self.args[0]):
+            return []
+        elif isinstance(self.args[0], NDimArray):
+            dim_aux = list(self.args[0].shape)
+            if sum(dim_aux) == 1:
+                return []
+            else:
+                return dim_aux
+        elif hasattr(self.args[0],'dim'):
+            return self.args[0].dim
+        else:
+            raise TypeError("Dimensions of first argument not found")
+        
+    def _eval_subs(self, old, new):
+        # Allow recursive substitution
+        arg = self.args[0]
+        return DeferredNegative(arg.subs(old, new) if hasattr(arg, 'subs') else arg)
+    
+    def evaluate(self):
+       def class_scalar(*args):
+           return sp.Mul(sp.sympify(-1), *args)
+       return self._evaluate(operator.neg, class_scalar)
+        
+    def _sympystr(self, printer, exp=None):
+        # Print each argument. doprint() applies recursion.
+        arg_str = printer.doprint(self.args[0])
+        
+        # Join them with the adequate operator
+        # Parentehsis are added to prevent ambiguity
+        result = f"(-{arg_str})"
+        if exp is not None:
+            result = f"{result}**{printer.doprint(exp)}"
+        return result
+
+    def _latex(self, printer, exp=None):
+        # Print each argument via the LaTeX printer. doprint() applies recursion.
+        arg_latex = printer.doprint(self.args[0])
+        
+        # Join using the LaTeX-specific operator (e.g., r" + ")
+        result = f"\\left( - {arg_latex} \\right)"
+        if exp is not None:
+            result = f"{result}^{{{printer.doprint(exp)}}}"
+        return result
+        
+class DeferredDivide(DeferredArithmetic):
+    operator = "/"
+
+    def __new__(cls, *args):
+        if len(args) != 2:
+            raise ValueError("Division expects exactly two arguments")
+        
+        # Rule: Denominator must be scalar
+        ranks = cls._get_ranks_list(args)
+        if None in ranks:
+            raise ValueError(f"Unknown rank for one of the arguments: {args}")
+        else:
+            if ranks[1] > 0:
+                raise ValueError(f"Denominator must always be scalar: {args}")
+            
+        return sp.Expr.__new__(cls, *args)
+    
+    @property
+    def rank(self):
+        return self._get_ranks_list(self.args)[0]
+    
+    @property
+    def dim(self):
+        if check_if_scalar(self.args[0]):
+            return []
+        elif isinstance(self.args[0], NDimArray):
+            dim_aux = list(self.args[0].shape)
+            if sum(dim_aux) == 1:
+                return []
+            else:
+                return dim_aux
+        elif hasattr(self.args[0],'dim'):
+            return self.args[0].dim
+        else:
+            raise TypeError("Dimensions of first argument not found")
+    
+    def _eval_subs(self, old, new):
+        # Allow recursive substitution
+        return DeferredDivide(*[arg.subs(old, new) if hasattr(arg, 'subs') else arg for arg in self.args])
+    
+    def evaluate(self):
+        def class_scalar(*args):
+           if all([isinstance(a, sp.Number) for a in args]):
+               return sp.Rational(*args)
+           elif isinstance(args[1], sp.Number):
+               return sp.Mul(args[0],sp.Rational(sp.sympify(1),args[1]))
+           else:
+               return operator.truediv(*args)
+        return self._evaluate(operator.truediv, class_scalar)
+
+    def _latex(self, printer, exp=None):
+        # Print each argument via the LaTeX printer. doprint() applies recursion.
+        args_latex = [printer.doprint(arg) for arg in self.args]
+        
+        # Join using the LaTeX-specific operator (e.g., r" + ")
+        result = f"\\frac{"{"}{args_latex[0]}{"}"}{"{"}{args_latex[1]}{"}"}"
+        if exp is not None:
+            result = f"{result}^{{{printer.doprint(exp)}}}"
+        return result
+    
+class DeferredPow(DeferredArithmetic):
+    operator = "**"
+
+    def __new__(cls, *args):
+        if len(args) != 2:
+            raise ValueError("Power expects exactly two arguments")
+        
+        # Rule: Both arguments must be scalar
+        ranks = cls._get_ranks_list(args)
+        if None in ranks:
+            raise ValueError(f"Unknown rank for one of the arguments: {args}")
+        else:
+            if any([rank > 0 for rank in ranks]):
+                raise ValueError(f"Base and exponent must always be scalar: {args}")
+            
+        return sp.Expr.__new__(cls, *args)
+    
+    @property
+    def rank(self):
+        return 0
+    
+    @property
+    def dim(self):
+        return []
+    
+    def _eval_subs(self, old, new):
+        # Allow recursive substitution
+        return DeferredPow(*[arg.subs(old, new) if hasattr(arg, 'subs') else arg for arg in self.args])
+    
+    def evaluate(self):
+        return self._evaluate(operator.pow,sp.Pow)
+
+    def _latex(self, printer, exp=None):
+        # Print each argument via the LaTeX printer. doprint() applies recursion.
+        args_latex = [printer.doprint(arg) for arg in self.args]
+        
+        # Join using the LaTeX-specific operator (e.g., r" + ")
+        result = f"{args_latex[0]}^{"{"}{args_latex[1]}{"}"}"
+        if exp is not None:
+            result = f"{result}^{{{printer.doprint(exp)}}}"
+        return result
         
 
 class BaseTensorPlaceholder(sp.Expr):
@@ -252,6 +471,11 @@ class BaseTensorPlaceholder(sp.Expr):
     The original placeholder can then be substituted by its array in any expression using the substitute_array() method.
     """
 
+    _op_priority = 100 # Give a vey high priority so deferred arithmetic operations are used whnever a BaseTensorPlaceholder is encountered (in left or right)
+
+    array_name_complement = '_array'
+    gauss_name_complement = '_gauss'
+
     # This indicates to sympy that it is commutative to + and * operators.
     # We will later restrict * to only allow multiplication by scalars and + to only objects of the same rank and dimensions.
     is_commutative = True
@@ -261,31 +485,41 @@ class BaseTensorPlaceholder(sp.Expr):
     @property
     def is_Atom(self):
         return True
+        # return False
+    
+    def __new__(cls, *args):
+        return super().__new__(cls, *args)
     
     # We assign the properties of the placeholder as arguments of the sympy expression.
-    def __new__(cls, info_dict):
-        name = info_dict['symbol']
-        rank = info_dict['tensor_rank']
-        dim = list(info_dict['dim'])
+    @classmethod
+    def from_info_dict(cls, info_dict):
+        name = sp.core.symbol.Str(info_dict['symbol']) # Prevent it from being converted to a symbol
+        rank = sp.sympify(info_dict['tensor_rank']) # Should be a sp.Integer
+        dim = sp.sympify(list(info_dict['dim']))
+        dim_str = ",".join([str(i) for i in list(info_dict['dim'])]) # We turn it into a string to make it hashable as an arg
+        dim_str = sp.core.symbol.Str(dim_str)
         if len(dim)!= rank:
             raise ValueError(f'Dimensions {dim} for {name} are not compatible with rank {rank}.')
         dependencies = info_dict['dependencies']
-        latex_str = info_dict.get('latex', name)
+        if isinstance(dependencies, str):
+            dependencies = sp.core.symbol.Str(dependencies) # Prevent it from beings converted to a symbol
+        latex_str = sp.core.symbol.Str(info_dict.get('latex', name)) # Prevent it from beings converted to a symbol
         flags = []
         if info_dict.get('symmetric', False):
             flags.append('symmetric')
         if info_dict.get('third_symmetry', False):
             flags.append('third_symmetry')
         if info_dict.get('use_voigt_notation', False):
-            flags.append('voigt')
+            flags.append('use_voigt_notation')
         if info_dict.get('positive', False):
             flags.append('positive')
-        return sp.Expr.__new__(cls, name, rank, dim, dependencies, latex_str, flags)
+        flags = sp.core.symbol.Str(",".join(flags))
+        return cls(name, rank, dim_str, dependencies, latex_str, flags)
     
     # Then we create accessors for those properties.
     @property
     def name(self):
-        return self.args[0]
+        return str(self.args[0])
     
     @property
     def rank(self):
@@ -293,7 +527,12 @@ class BaseTensorPlaceholder(sp.Expr):
     
     @property
     def dim(self):
-        return self.args[2]
+        # We recover the list from the string arg
+        dim_str = str(self.args[2])
+        if dim_str:
+            return [int(i) for i in dim_str.split(",")]
+        else:
+            return []
     
     @property
     def dependencies(self):
@@ -301,11 +540,20 @@ class BaseTensorPlaceholder(sp.Expr):
     
     @property
     def latex_str(self):
-        return self.args[4]
+        return str(self.args[4])
     
     @property
     def flags(self):
-        return self.args[5]
+        flags_str = str(self.args[5])
+        if flags_str:
+            return [flag for flag in flags_str.split(",")]
+        else:
+            return []
+    
+    @property
+    def array(self):
+        array_name = self.name+self.array_name_complement
+        return self._generate_functions_array(array_name, self.dependencies)
         
     def substitute_components_simulatneous(self, expr, original, new):
         original_iterator = get_flat_list_of_components(original)
@@ -323,6 +571,9 @@ class BaseTensorPlaceholder(sp.Expr):
         # return add_op(other, self)
         return DeferredAdd(other, self)
     
+    def __neg__(self):
+        return DeferredNegative(self)
+    
     def __mul__(self, other):
         # return prod_op(self, other)
         return DeferredMul(self, other)
@@ -331,7 +582,17 @@ class BaseTensorPlaceholder(sp.Expr):
         # return prod_op(other, self)
         return DeferredMul(other, self)
     
-    # Printing
+    def __truediv__(self, other):
+        return DeferredDivide(self, other)
+    
+    def __rtruediv__(self, other):
+        return DeferredDivide(other, self)
+    
+    def __pow__(self, other):
+        return DeferredPow(self, other)
+    
+    def __rpow__(self, other):
+        return DeferredPow(other, self)
     
     def _latex(self, printer, exp=None, *args):
         if isinstance(printer, CustomLatexPrinter):
@@ -361,24 +622,35 @@ class BaseTensorPlaceholder(sp.Expr):
         return sp.sstr(self).__format__(format_spec)
     
     def _fill_array_rank2(self, base_name, dependencies_list):
-        out_array = sp.MutableDenseNDimArray(sp.zeros(self.dim**2),shape=(self.dim,self.dim))
-        for i in range(self.dim):
-            for j in range(self.dim):
-                if "symmetric" in self.flags:
+        flags = [str(flag) for flag in self.flags] # Convert to strings for comparison
+        number_of_elements = 1
+        for dim_comp in self.dim:
+            number_of_elements *= dim_comp
+        out_array = sp.MutableDenseNDimArray(sp.zeros(number_of_elements),shape=self.dim)
+        for i in range(self.dim[0]):
+            for j in range(self.dim[1]):
+                if "symmetric" in flags:
                     indexes_string = '_'+str(min(i,j))+'_'+str(max(i,j)) # Apply symmetry
                 else:
                     indexes_string = '_'+str(i)+'_'+str(j)
-                out_array[i,j] = sp.Function(base_name+indexes_string)(*dependencies_list)
+                if dependencies_list is None:
+                    out_array[i,j] = sp.Symbol(base_name+indexes_string)
+                else:
+                    out_array[i,j] = sp.Function(base_name+indexes_string)(*dependencies_list)
         return out_array
     
     def _fill_array_rank4(self, base_name, dependencies_list):
-        out_array = sp.MutableDenseNDimArray(sp.zeros(self.dim**4),shape=(self.dim,self.dim,self.dim,self.dim))
-        for i in range(self.dim):
-            for j in range(self.dim):
-                for k in range(self.dim):
-                    for l in range(self.dim):
+        flags = [str(flag) for flag in self.flags] # Convert to strings for comparison
+        number_of_elements = 1
+        for dim_comp in self.dim:
+            number_of_elements *= dim_comp
+        out_array = sp.MutableDenseNDimArray(sp.zeros(number_of_elements),shape=self.dim)
+        for i in range(self.dim[0]):
+            for j in range(self.dim[1]):
+                for k in range(self.dim[2]):
+                    for l in range(self.dim[3]):
                         unique_index = [min(i,j), max(i,j), min(k,l), max(k,l)] # Apply first two symmetries
-                        if "third_symmetry" in self.flags:
+                        if "third_symmetry" in flags:
                             if unique_index[0] > unique_index[2]:
                                 unique_index = [unique_index[2],unique_index[3],unique_index[0],unique_index[1]]
                             elif unique_index[0] == unique_index[2]:
@@ -387,29 +659,45 @@ class BaseTensorPlaceholder(sp.Expr):
                         indexes_string=''
                         for index in unique_index:
                             indexes_string += '_'+str(index)
-                        out_array[i,j,k,l] = sp.Function(base_name+indexes_string)(*dependencies_list)
+                        if dependencies_list is None:
+                            out_array[i,j,k,l] = sp.Symbol(base_name+indexes_string)
+                        else:
+                            out_array[i,j,k,l] = sp.Function(base_name+indexes_string)(*dependencies_list)
         return out_array
     
     def _generate_functions_array(self, base_name, dependencies_list):
         if self.rank == 0:
-            return sp.Function(base_name)(*dependencies_list)
+            if dependencies_list is None:
+                return sp.Symbol(base_name)
+            else:
+                return sp.Function(base_name)(*dependencies_list)
         elif self.rank == 1:
-            return sp.Array([sp.Function(base_name+'_'+str(i))(*dependencies_list) for i in range(self.dim[0])])
+            if dependencies_list is None:
+                return sp.Array([sp.Symbol(base_name+'_'+str(i)) for i in range(self.dim[0])])
+            else:
+                return sp.Array([sp.Function(base_name+'_'+str(i))(*dependencies_list) for i in range(self.dim[0])])
         elif self.rank == 2:
-            return self._fill_array_rank2(*dependencies_list)
+            return self._fill_array_rank2(base_name, dependencies_list)
         elif self.rank == 4:
-            return self._fill_array_rank4(*dependencies_list)
+            return self._fill_array_rank4(base_name, dependencies_list)
         else:
             raise NotImplementedError(f"Rank {self.rank} not implemented yet for _generate_functions_array() in BaseTensorPlaceholder")
 
 
 class VarsCombination(sp.Expr):
+    """
+    This is a container for combinations of variables to be used as dependecies or as arguments for derivatives.
+    This base class implements the array property by returning a list of all the flatttened components of the arguments in their array form.
+
+    Example: VarsCombination(A,x) where A is a SymbolicPlaceholder of rank 2 and x is a Sympy Symbol.
+        Then VarsCombination(A,x).array will return [A_0_0, A_0_1, A_1_0, A_1_1, x]
+    """
 
     is_commutative = False
     
     @property
     def is_Atom(self):
-        return False
+        return True
     
     def __new__(cls, *components):
         for comp in components:
@@ -422,20 +710,10 @@ class VarsCombination(sp.Expr):
         # Initialize a VarsCombination based on a list of names and a namespace
         components = [namespace[name] for name in args]
         return cls(*components)
-
-
-    def evaluate(self):
-        # Return array of flattened components. We assume everything inside will be either NDimArrays or Functions or Symbols
-        flattened_components = []
-        for arg in self:
-            if isinstance(arg, sp.NDimArray):
-                dim = list(arg.shape)
-                index_ranges = [range(d) for d in dim]
-                index_combinations = itertools.product(*index_ranges)
-                flattened_components.extend([arg[indices] for indices in index_combinations])
-            else:
-                flattened_components.append(arg)
-        return sp.Array(flattened_components)
+    
+    def _eval_subs(self, old, new):
+        # No recursive substitution
+        return self
     
     @property
     def rank(self):
@@ -461,6 +739,86 @@ class VarsCombination(sp.Expr):
                 raise Exception(f"Object {arg} within VarsCombination is not recognized")
         return [total_dims]
     
+    @property
+    def array(self):
+        flattened_components = []
+        for arg in self.args:
+            # If any of the arguments is a BaseTensorPlaceholder, get its array attribute and flatten it
+            if isinstance(arg, BaseTensorPlaceholder):
+                flattened_components.extend(get_flat_list_of_components(arg.array))
+            else:
+                flattened_components.extend(get_flat_list_of_components(arg))
+        return flattened_components
+    
+    @property
+    def gauss(self):
+        flattened_components = []
+        for arg in self.args:
+            # If any of the arguments is a BaseTensorPlaceholder, get its array attribute and flatten it
+            if isinstance(arg, BaseTensorPlaceholder):
+                flattened_components.extend(get_flat_list_of_components(arg.gauss))
+            else:
+                flattened_components.extend(get_flat_list_of_components(arg))
+        return flattened_components
+    
+    def __len__(self):
+        return len(self.array)
+    
+    def __iter__(self):
+        self.count = 0
+        return self
+
+    def __next__(self):
+        if self.count < len(self):
+            out = self.array[self.count]
+            self.count += 1
+            return out
+        raise StopIteration
+    
+    def get_tuple_string(self, printer=None):
+        out_str = '('
+        for var in self.args:
+            if isinstance(var,BaseTensorPlaceholder):
+                out_str += var.latex_str+','
+            elif printer is not None:
+                out_str += printer._print(var)+','
+            else:
+                out_str += str(var)+','
+        out_str = out_str[:-1]+')'
+        return out_str
+
+    def get_names_list(self):
+        return [arg.name for arg in self.args]
+    
+    def __repr__(self):
+        return "VarsCombination("+",".join([repr(arg) for arg in self.args])+")"
+    
+
+class CoordsIndicator(VarsCombination):
+    
+    def __new__(cls, *components):
+        for comp in components:
+            if not isinstance(comp, sp.Symbol):
+                raise TypeError(f"Cannot include {comp} in a CoordsIndicator, as  it is not a Sympy Symbol")
+        return sp.Expr.__new__(cls, *components)
+    
+    @property
+    def rank(self):
+        return 1
+    
+    @property
+    def dim(self):
+        # All components must be scalars, so the total dimension is just the number of components
+        return [self.__len__()]
+    
+    @property
+    def array(self):
+        return list(self.args)
+    
+    @property
+    def gauss(self):
+        raise NotImplementedError("CoordsIndicator does not implement gauss attribute")
+    
     def __len__(self):
         return len(self.args)
     
@@ -477,201 +835,267 @@ class VarsCombination(sp.Expr):
     
     def get_tuple_string(self, printer=None):
         out_str = '('
-        for var in self.vars_objects:
-            if isinstance(var,BaseTensorPlaceholder):
-                out_str += var.latex_str+','
-            elif printer is not None:
+        for var in self.args:
+            if printer is not None:
                 out_str += printer._print(var)+','
             else:
                 out_str += str(var)+','
         out_str = out_str[:-1]+')'
-
-    def get_names_list(self):
-        return self.vars_symbols
-    
-    def discretize_expression(self, placeholder_names_list, namespace):
-        expr = substitute_all_placeholders_in_expression(self, placeholder_names_list, namespace)
-        expr = expr.evaluate()
-        expr = substitute_all_arrays_in_expression(expr, placeholder_names_list, namespace)
-        return expr
+        return out_str
     
     def __repr__(self):
-        return "VarsCombination("+",".join([repr(arg) for arg in self.args])+")"
+        return "CoordsIndicator("+",".join([repr(arg) for arg in self.args])+")"
 
 class CoefficientsIndicator(VarsCombination):
+    """
+    Used as a possible dependency of tensors used in the substitution phases. Refers to the nodal coefficients of the given variables.
+    """
 
     def __new__(cls, *components):
         for comp in components:
-            if not isinstance(comp, BaseTensorPlaceholder) and not comp.__cls___.__name__ in ['NodalTensorPlaceholder','UnknownTensorPlaceholder']:
+            if isinstance(comp, BaseTensorPlaceholder) and not comp.__class__.__name__ in ['NodalTensorPlaceholder','UnknownTensorPlaceholder']:
                 raise TypeError(f"Cannot include {comp} in a VarsCombination, as  it is not a NodalTensorPlaceholder or UnknownTensorPlaceholder")
         return sp.Expr.__new__(cls, *components)
     
+    @property
+    def array(self):
+        # raise NotImplementedError("CoefficientsIndicator does not implement array attribute. It is meant to be used as a possible dependency of tensors used in the substitution phases.")
+        return self
+    
+    @property
+    def gauss(self):
+        # Returns the list of nodal values for all components.
+        # The order is [var_1_comp_1_node_1, var_1_comp_2_node_1, var_2_node_1, var_1_comp_1_node_2, var_1_comp_2_node_2, var_2_node_2, ...]
+        combined_dofs_mat = self.args[0].nodes
+        for var in self.args[1:]:
+            combined_dofs_mat = combined_dofs_mat.row_join(var.nodes)
+        return get_flat_list_of_components(combined_dofs_mat)
+    
     def evaluate(self):
-        raise NotImplementedError("CoefficientsIndicator does not implement evaluate()")
+        # Unlike VarsCombination and CoordsIndicator, this one can be used as a standalone input to a DerivIndicator's denominator.
+        # Therefore it implements an evaluate function that just returns the gauss property (variable nodal values) in array form.
+        return sp.Array(self.gauss)
+    
+    def __len__(self):
+        return 1
+    
+    def __iter__(self):
+        self.count = 0
+        return self
 
-    def discretize_expression(self, placeholder_names_list, namespace):
-        out = []
-        for var in self.args:
-            out.extend(get_flat_list_of_components(var.nodes))
-        return out
+    def __next__(self):
+        if self.count < len(self):
+            self.count += 1
+            return self.array
+        raise StopIteration
     
     def __repr__(self):
         return "CoefficientsIndicator("+",".join([repr(arg) for arg in self.args])+")"
-    
-    
-class DerivIndicator():
-    def __init__(self, function, vars):
-        self.function_symbol = function
-        self.vars_symbol = vars
 
-    def get_args_names_list(self):
-        out = [self.function_symbol]
-        if isinstance(self.vars_symbol, VarsCombination):
-            out.extend(self.vars_symbol.get_names_list())
-        elif isinstance(self.vars_symbol,str):
-            out.append(self.vars_symbol)
+class DeferredTensorOp(sp.Expr):
+    _op_priority = 100 # Give a vey high priority so deferred arithmetic operations are used whnever a DeferredTensorOp is encountered (in left or right)
+
+    is_commutative = True  # This allows SymPy to automatically simplify expressions like a + b + c, even if a, b, c are DeferredTensorOps
+
+    def __new__(cls, *args):
+        config = OPERATORS_CONFIG.get(cls.__name__, None)
+        if config is None:
+            raise ValueError(f"No operator configuration found for {cls.__name__}")
+        
+        # Retrieve the current active system
+        coords = ACTIVE_COORD_SYSTEM.get()["coord_symbols"]
+        transposed_gradients_flag = ACTIVE_COORD_SYSTEM.get()["transposed_gradients_flag"]
+        if coords is None:
+            raise RuntimeError("Operator called outside of a 'with CoordinateSystem(...)' block.")
+
+        arity = config.get('arity', None)
+        if arity is None:
+            raise ValueError(f"Operator {cls.__name__} has no arity defined")
+        if len(args) != arity:
+            raise ValueError(f"{cls.__name__} expects exactly {arity} arguments, got {len(args)}")
+        
+
+        # Validation: get list of ranks and dims and apply custom checks
+        pass_coords = config.get('pass_coords', False)
+        if pass_coords:
+            ranks, dims = cls._get_ranks_and_dims(args + (coords,))
         else:
-            raise "Only acceptable formats for derivative denominator are string, VarsCombination() or DofsIndicator()"
-        return out
-
-    # def get_deriv_name(self):
-    #     return '_'.join(self.get_args_names_list())+'_deriv'
+            ranks, dims = cls._get_ranks_and_dims(args)
+        
+        constraints = cls._get_field_from_correct_version(config, 'constraints', {}, transposed_gradients_flag)
+        if 'rank' in constraints.keys():
+            is_valid, err_str = cls._validate_inputs(ranks, constraints, 'rank', pass_coords)
+            if not is_valid:
+                raise ValueError(err_str)
+        if 'dim' in constraints.keys():
+            is_valid, err_str = cls._validate_inputs(dims, constraints, 'dim', pass_coords)
+            if not is_valid:
+                raise ValueError(err_str)
+        return sp.Expr.__new__(cls, *args)
     
-    def get_derivative_iterator_pre_lhs(self, placeholder_names_list, namespace):
-        numerator_expression = substitute_all_placeholders_in_expression(namespace[self.function_symbol], placeholder_names_list, namespace)
-        numerator_iterator = get_flat_list_of_components(numerator_expression)
-        if isinstance(self.vars_symbol,str):
-            if self.vars_symbol == "base_scalars":
-                self.vars_symbol = ACTIVE_COORD_SYSTEM.get()["coord_symbols"]
+    @staticmethod
+    def _get_field_from_correct_version(config, field_name, default_val, transposed_gradients_flag):
+        # Apply alternate versions of the operator if specified in the YAML config based on the flags, ohterwise original config
+        field = config.get(field_name, default_val)
+        if "alternate_version" in config.keys():
+            for version_name in config["alternate_version"].keys():
+                if version_name == 'transposed_gradients_flag' and transposed_gradients_flag:
+                    field = config["alternate_version"]["transposed_gradients_flag"].get(field_name, field)
+        return field
+    
+    @staticmethod
+    def _get_ranks_and_dims(args):
+        ranks = []
+        dims = []
+        for arg in args:
+            if check_if_scalar(arg):
+                rank = 0
+                dim = []
+            elif isinstance(arg, sp.NDimArray):
+                dim_aux = list(arg.shape)
+                if sum(dim_aux) == 1:
+                    rank = 0
+                    dim = []
+                else:
+                    rank = arg.rank()
+                    dim = dim_aux
             else:
-                array = substitute_all_placeholders_in_expression(namespace[self.vars_symbol], placeholder_names_list, namespace)
-                denominator_iterator = array.evaluate()
-        if isinstance(self.vars_symbol, VarsCombination):
-            array_vars_combination = substitute_all_placeholders_in_expression(self.vars_symbol, placeholder_names_list, namespace)
-            denominator_iterator = array_vars_combination.evaluate()
-        
-        derivatives_list = []
-        if ACTIVE_COORD_SYSTEM.get()["transposed_gradients_flag"]:
-            for numerator in numerator_iterator:
-                for denominator in denominator_iterator:
-                    derivatives_list.append(sp.Derivative(numerator,denominator))
-        else:
-            for denominator in denominator_iterator:
-                for numerator in numerator_iterator:
-                    derivatives_list.append(sp.Derivative(numerator,denominator))
-        return derivatives_list
+                rank = getattr(arg, 'rank', None)
+                dim = getattr(arg, 'dim', None)
+            ranks.append(rank)
+            dims.append(dim)
+        return ranks, dims
     
-    def get_derivative_iterator_post_lhs(self, placeholder_names_list, namespace):
-        numerator_expression = substitute_all_placeholders_in_expression(namespace[self.function_symbol], placeholder_names_list, namespace)
-        if not (isinstance(numerator_expression, sp.NDimArray) or isinstance(numerator_expression, sp.Function)):
-                    numerator_expression = numerator_expression.evaluate()
-        numerator_expression = substitute_all_arrays_in_expression(numerator_expression, placeholder_names_list, namespace)
-        numerator_iterator = get_flat_list_of_components(numerator_expression)
-        if isinstance(self.vars_symbol,str):
-            if self.vars_symbol == "base_scalars":
-                raise ValueError("Cannot differentiate with respect to base_scalars in post-LHS substitution")
+    @classmethod
+    def _validate_inputs(cls, values_list, constraints, quantity_name, pass_coords):
+        if pass_coords:
+            vars = {'a': values_list[0], 'b': values_list[1], 'coords': values_list[2]} if len(values_list) == 3 else {'a': values_list[0], 'coords': values_list[1]}
+        else:
+            vars = {'a': values_list[0], 'b': values_list[1]} if len(values_list) == 2 else {'a': values_list[0]}
+        is_valid = evaluate_yaml_operators_tree(constraints[quantity_name], vars)
+        if not is_valid:
+            return False, f"{quantity_name} constraints not satisfied in {cls.__name__}. Values: {values_list}"
+        return True, ""
+
+    @property
+    def rank(self):
+        class_name = self.__class__.__name__
+        config = OPERATORS_CONFIG[class_name]
+        coords = ACTIVE_COORD_SYSTEM.get()["coord_symbols"]
+        pass_coords = config.get('pass_coords', False)
+
+        if pass_coords:
+            ranks, _ = self._get_ranks_and_dims(self.args+(coords,))
+            vars = {'a': ranks[0], 'b': ranks[1], 'coords': ranks[2]} if len(ranks) == 3 else {'a': ranks[0], 'coords': ranks[1]}
+        else:
+            ranks, _ = self._get_ranks_and_dims(self.args)
+            vars = {'a': ranks[0], 'b': ranks[1]} if len(ranks) == 2 else {'a': ranks[0]}
+
+        transposed_gradients_flag = ACTIVE_COORD_SYSTEM.get()["transposed_gradients_flag"]
+        output_config = self._get_field_from_correct_version(config, 'output', {}, transposed_gradients_flag)
+
+        return evaluate_yaml_operators_tree(output_config['rank'], vars)
+    
+    @property
+    def dim(self):
+        class_name = self.__class__.__name__
+        config = OPERATORS_CONFIG[class_name]
+        coords = ACTIVE_COORD_SYSTEM.get()["coord_symbols"]
+        pass_coords = config.get('pass_coords', False)
+
+        if pass_coords:
+            _, dims = self._get_ranks_and_dims(self.args+(coords,))
+            vars = {'a': dims[0], 'b': dims[1], 'coords': dims[2]} if len(dims) == 3 else {'a': dims[0], 'coords': dims[1]}
+        else:
+            _, dims = self._get_ranks_and_dims(self.args)
+            vars = {'a': dims[0], 'b': dims[1]} if len(dims) == 2 else {'a': dims[0]}
+
+        transposed_gradients_flag = ACTIVE_COORD_SYSTEM.get()["transposed_gradients_flag"]
+        output_config = self._get_field_from_correct_version(config, 'output', {}, transposed_gradients_flag)
+        return evaluate_yaml_operators_tree(output_config['dim'], vars)
+
+    def evaluate(self):
+        class_name = self.__class__.__name__
+        config = OPERATORS_CONFIG[class_name]
+        transposed_gradients_flag = ACTIVE_COORD_SYSTEM.get()["transposed_gradients_flag"]
+        coords = ACTIVE_COORD_SYSTEM.get()["coord_symbols"]
+
+        # Resolve dependencies recursively
+        resolved_args = [arg.evaluate() if hasattr(arg, 'evaluate') else arg for arg in self.args]
+        pass_coords = config.get('pass_coords', False)
+        if pass_coords:
+            resolved_args.append(coords.evaluate() if hasattr(coords, 'evaluate') else coords)
+
+        # Perform the actual tensor math
+        if all(not arg.has(BaseTensorPlaceholder) for arg in resolved_args):
+            implementation_name = self._get_field_from_correct_version(config, 'implementation', None, transposed_gradients_flag)
+            
+            # Dynamically loads the function from the tensor operators file.
+            try:
+                # Import the module
+                module = importlib.import_module('lib.tensor_operators')
+                # Get the function object by name
+                op_func = getattr(module, implementation_name)
+                # Return the result of the function call with the resolved arguments
+                return op_func(*resolved_args)
+            except (ImportError, AttributeError) as e:
+                raise ValueError(f"Could not find implementation '{implementation_name}': {e}")
+        
+        # If still symbolic, return the symbolic representation
+        return self.func(*resolved_args)
+
+    # Algebraic operators
+    
+    def __add__(self, other):
+        # return add_op(self, other)
+        return DeferredAdd(self, other)
+    
+    def __radd__(self, other):
+        # return add_op(other, self)
+        return DeferredAdd(other, self)
+    
+    def __neg__(self):
+        return DeferredNegative(self)
+    
+    def __mul__(self, other):
+        # return prod_op(self, other)
+        return DeferredMul(self, other)
+    
+    def __rmul__(self, other):
+        # return prod_op(other, self)
+        return DeferredMul(other, self)
+    
+    def __truediv__(self, other):
+        return DeferredDivide(self, other)
+    
+    def __rtruediv__(self, other):
+        return DeferredDivide(other, self)
+    
+    def __pow__(self, other):
+        return DeferredPow(self, other)
+    
+    def __rpow__(self, other):
+        return DeferredPow(other, self)
+    
+    # Printing
+    def _latex(self, printer, exp=None, *args):
+        if isinstance(printer, CustomLatexPrinter):
+            class_name = self.__class__.__name__
+            config = OPERATORS_CONFIG[class_name]
+            a = printer._print(self.args[0])
+            b = printer._print(self.args[1]) if len(self.args) > 1 else None
+            latex_pattern = config.get('latex', None)
+            latex_string = latex_pattern.format(a=a, b=b)
+            if exp is None:
+                return latex_string
             else:
-                denominator_expression = substitute_all_placeholders_in_expression(namespace[self.function_symbol], placeholder_names_list, namespace)
-                if not (isinstance(denominator_expression, sp.NDimArray) or isinstance(denominator_expression, sp.Function)):
-                    denominator_expression = denominator_expression.evaluate()
-                denominator_expression = substitute_all_arrays_in_expression(denominator_expression, placeholder_names_list, namespace)
-                denominator_iterator = get_flat_list_of_components(denominator_expression)
-        if isinstance(self.vars_symbol, VarsCombination):
-            denominator_expression = self.vars_symbol.discretize_expression(placeholder_names_list, namespace)
-            denominator_iterator = get_flat_list_of_components(denominator_expression)
-        
-        derivatives_list = []
-        if ACTIVE_COORD_SYSTEM.get()["transposed_gradients_flag"]:
-            for numerator in numerator_iterator:
-                for denominator in denominator_iterator:
-                    derivatives_list.append(sp.Derivative(numerator,denominator))
+                if config.get('needs_parentheses_when_exp', True):
+                    latex_string = r"\\left(%s\\right)" % latex_string
+                return r"{%s}^{%s}" % (latex_string, exp)
         else:
-            for denominator in denominator_iterator:
-                for numerator in numerator_iterator:
-                    derivatives_list.append(sp.Derivative(numerator,denominator))
-        return derivatives_list
+            return printer._print_Function(self, exp=exp)
     
-    def __repr__(self):
-        return "DerivIndicator("+self.function_symbol+","+self.vars_symbol+")"
-    
-    # def get_derivative_iterator_for_gauss(self, namespace):
-    #     numerator_iterator_aux = get_flat_list_of_components(namespace[self.function_symbol])
-    #     numerator_iterator = [numerator_elem_aux.array for numerator_elem_aux in numerator_iterator_aux]
-    #     if isinstance(self.vars_symbol, DofsIndicator):
-    #         denominator_iterator = self.vars_symbol.get_dependency_list_array_or_matrix(SYMB)
-    #     elif isinstance(self.vars_symbol, VarsCombination):
-    #         denominator_iterator_aux = self.vars_symbol.get_objects_list(SYMB, name_complement)
-    #         denominator_iterator = [subs_function(denominator_elem_aux) for denominator_elem_aux in denominator_iterator_aux]
-    #     elif isinstance(self.vars_symbol,str):
-    #         denominator_iterator_aux = get_flat_list_of_components(SYMB[self.vars_symbol+name_complement])
-    #         denominator_iterator = [subs_function(denominator_elem_aux) for denominator_elem_aux in denominator_iterator_aux]
-    #     derivatives_list = []
-    #     if transposed:
-    #         for numerator in numerator_iterator:
-    #             for denominator in denominator_iterator:
-    #                 derivatives_list.append(sp.Derivative(numerator,denominator))
-    #     else:
-    #         for denominator in denominator_iterator:
-    #             for numerator in numerator_iterator:
-    #                 derivatives_list.append(sp.Derivative(numerator,denominator))
-    #     return derivatives_list
-    
-
-# ## Define tensorplaceholder-compatible versions of most basic operators
-
-# class add_op(sp.Function):
-#     # precedence = PRECEDENCE["Add"]
-#     # is_Add = True
-
-#     @classmethod
-#     def eval(cls, *args):
-#         do_eval = True
-#         for arg in args:
-#             if arg.has(BaseTensorPlaceholder):
-#                 do_eval = False
-#         if do_eval:
-#             rv = args[0]
-#             print("evaling add_op with args: ", [type(arg) for arg in args])
-#             for arg in args[1:]:
-#                 rv += arg
-#             print('done')
-#             return rv
-        
-#     def doit(self, deep=False, **hints):
-#         exp_args = []
-#         if deep:
-#             for arg in self.args:
-#                 exp_args.append(arg.doit(deep=deep, **hints))
-#         else: 
-#             exp_args = self.args
-#         rv = exp_args[0]
-#         for exp_arg in exp_args[1:]:
-#             rv += exp_arg
-#         return rv
-
-# class prod_op(sp.Function):
-#     # precedence = PRECEDENCE['Mul']
-#     # is_Mul = True
-
-#     @classmethod
-#     def eval(cls, a, b):
-#         if not a.has(BaseTensorPlaceholder) and not b.has(BaseTensorPlaceholder):
-#             return a*b
-        
-#     def doit(self, deep=False, **hints):
-#         a, b = self.args
-#         if deep:
-#            a, b = a.doit(deep=deep, **hints), b.doit(deep=deep, **hints)
-#         return a*b
-
-# class neg_op(sp.Function):
-
-#     @classmethod
-#     def eval(cls, a):
-#         return prod_op(-1,a)
-
-# class sub_op(sp.Function):
-
-#     @classmethod
-#     def eval(cls, a, b):
-#         return add_op(a,neg_op(b))
+    def __format__(self, format_spec: str):
+        # This forces f-strings to use your __str__ method, 
+        # and then apply standard string formatting on top of that.
+        return sp.sstr(self).__format__(format_spec)

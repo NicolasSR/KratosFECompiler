@@ -6,18 +6,16 @@ def main(options_dict):
 
     ## Symbolic generation settings
     dim = options_dict["dim"]
+    nnodes = options_dict["nnodes"]
 
     # Define further options based on formulation
     if dim == 2:
-        nnodes = 3
         strain_size = 3
     elif dim == 3:
-        nnodes = 4
         strain_size = 6
     else:
         err_msg = "Incompatible number of dimensions: " + str(dim)
         raise Exception(err_msg)
-
 
     impose_partion_of_unity = False
     N,DN = ksu.DefineShapeFunctions(nnodes, dim, impose_partion_of_unity)

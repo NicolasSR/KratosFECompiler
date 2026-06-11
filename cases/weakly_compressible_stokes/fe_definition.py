@@ -1,26 +1,21 @@
+## Associated paper:
+## https://www.sciencedirect.com/science/article/pii/S0045782523002001
+
 from collections import OrderedDict
+
+import numpy as np
+import sympy as sp
 
 from lib.basic_classes import DofsIndicator
 from kratos_fe_compiler.compiler import compile
-
-INPUT_COMPATIBILITIES_DICT = {
-    2: [3],
-    3: [4]
-}
     
 def main(options_dict):
 
     ## Symbolic generation settings
     dim = options_dict["dim"]
     nnodes = options_dict["nnodes"]
-    formulation = "WeaklyCompressibleNavierStokes"
     divide_by_rho = options_dict["divide_by_rho"]
     ASGS_stabilization = options_dict["ASGS_stabilization"]
-    
-    ## Check that formulation type, dim and number of nodes are compatible:
-    if (not dim in INPUT_COMPATIBILITIES_DICT.keys()) or (not nnodes in INPUT_COMPATIBILITIES_DICT[dim]):
-        err_msg = "Wrong Dimensions or Number of Nodes for formulation " + formulation
-        raise Exception(err_msg)
 
     # Input for compiler
 
@@ -55,25 +50,6 @@ def main(options_dict):
         },{
             'symbol': 'v_sol_frac',
             'latex': 'v_{SolFrac}',
-            'tensor_rank': 1
-        },{
-            'symbol': 'pn',
-            'latex': 'p_n',
-            'tensor_rank': 0
-        },{
-            'symbol': 'pnn',
-            'latex': 'p_{nn}',
-            'tensor_rank': 0
-        },{
-            'symbol': 'rho',
-            'latex': '\\rho',
-            'tensor_rank': 0
-        },{
-            'symbol': 'c',
-            'tensor_rank': 0
-        },{
-            'symbol': 'vmesh',
-            'latex': 'v_{mesh}',
             'tensor_rank': 1
         }
         ]
@@ -133,19 +109,25 @@ def main(options_dict):
             'latex': 'bdf_2',
             'tensor_rank': 0
         },{
+            'symbol': 'rho',
+            'latex': '\\rho',
+            'tensor_rank': 0
+        }
+        ]
+    
+    numerical_tensors=[
+        {
             'symbol': 'sigma',
             'latex': '\\sigma',
             'tensor_rank': 0,
-            'positive': True
+            'value': 0.0
         },{
             'symbol': 'stab_c3',
             'latex': 'c_{3\\,stab}',
             'tensor_rank': 0,
-            'positive': True
+            'value': 0.0
         }
-        ]
-    
-    numerical_tensors=[]
+    ]
 
     defined_functions = []
 
@@ -155,20 +137,11 @@ def main(options_dict):
     expr['tau1_denom_aux2'] = "¨stab_c1¨*¨mu¨/¨h¨**2"
     expr['tau1_denom_aux3'] = "¨stab_c3¨*¨sigma¨/¨h¨"
     expr['tau2_aux1'] = "¨stab_c3¨*¨sigma¨/¨stab_c1¨"
-    expr['vconv'] = "sub_op(¨v¨,¨vmesh¨)"
-    expr['stab_norm_a'] = "norm(¨vconv¨)"
-    expr['tau1_denom_aux4'] = "¨stab_c2¨*¨rho¨*¨stab_norm_a¨/¨h¨"
-    expr['tau1_denom'] = "add_op(¨tau1_denom_aux1¨,¨tau1_denom_aux2¨,¨tau1_denom_aux3¨,¨tau1_denom_aux4¨)"
-    expr['tau2_aux2'] = "¨stab_c2¨*¨rho¨*¨stab_norm_a¨*¨h¨/¨stab_c1¨"
-    expr['tau2'] = "add_op(¨mu¨,¨tau2_aux1¨,¨tau2_aux2¨)"
+    expr['tau1_denom'] = "add_op(¨tau1_denom_aux1¨,¨tau1_denom_aux2¨,¨tau1_denom_aux3¨)"
+    expr['tau2'] = "add_op(¨mu¨,¨tau2_aux1¨)"
     expr['tau1'] = "1/¨tau1_denom¨"
 
     expr['accel'] = "add_op(prod_op(¨bdf0¨,¨v¨),prod_op(¨bdf1¨,¨vn¨),prod_op(¨bdf2¨,¨vnn¨))"
-
-    expr['pder'] = "add_op(¨bdf0¨*¨p¨,¨bdf1¨*¨pn¨,¨bdf2¨*¨pnn¨)"
-
-    expr['convective_term'] = f"contract(¨vconv¨,grad(¨v¨,¨base_scalars¨,{trans_str}))"
-    expr['rho_convective_term'] = f"dot(¨vconv¨,grad(¨rho¨,¨base_scalars¨,{trans_str}))"
 
     expr['functional_aux1'] = "¨rho¨*dot(¨w¨,¨f¨)"
     expr['functional_aux2'] = "-1*¨rho¨*dot(¨w¨,¨accel¨)"
@@ -178,14 +151,9 @@ def main(options_dict):
         expr['functional_aux5'] = "-1*¨sigma¨*dot(¨w¨,sub_op(¨v¨,¨v_sol_frac¨))"
         expr['functional_aux6'] = "-1*div(¨v¨,¨base_scalars¨)*¨q¨"
         functional_tmp = "add_op(¨functional_aux1¨,¨functional_aux2¨,¨functional_aux3¨,¨functional_aux4¨,¨functional_aux5¨,¨functional_aux6¨)"
-        functional_tmp = "sub_op("+functional_tmp+",1/(¨rho¨*¨c¨**2)*¨q¨*¨pder¨)"
-        functional_tmp = "sub_op("+functional_tmp+",1/(¨rho¨)*¨q¨*¨rho_convective_term¨)"
     else:
         expr['functional_aux7'] = "-1*¨rho¨*¨q¨*div(¨v¨,¨base_scalars¨)"
         functional_tmp = "add_op(¨functional_aux1¨,¨functional_aux2¨,¨functional_aux3¨,¨functional_aux4¨,¨functional_aux7¨)"
-        functional_tmp = "sub_op("+functional_tmp+",1/(¨c¨**2)*¨q¨*¨pder¨)"
-        functional_tmp = "sub_op("+functional_tmp+",¨q¨*¨rho_convective_term¨)"
-    functional_tmp = "sub_op("+functional_tmp+",¨rho¨*dot(¨w¨,¨convective_term¨))"
     expr['functional'] = functional_tmp
 
     expr['vel_residual_aux1'] = "prod_op(¨rho¨,¨f¨)"
@@ -193,17 +161,12 @@ def main(options_dict):
     expr['vel_residual_aux3'] = f"prod_op(-1,grad(¨p¨,¨base_scalars¨,{trans_str}))"
     expr['vel_residual_aux4'] = "prod_op(-1*¨sigma¨,sub_op(¨v¨,¨v_sol_frac¨))"
     vel_residual_tmp = "add_op(¨vel_residual_aux1¨,¨vel_residual_aux2¨,¨vel_residual_aux3¨,¨vel_residual_aux4¨)"
-    vel_residual_tmp = "sub_op("+vel_residual_tmp+",prod_op(¨rho¨,¨convective_term¨))"
     expr['vel_residual'] = vel_residual_tmp
 
     if divide_by_rho:
         mas_residual_tmp = "-1*div(¨v¨,¨base_scalars¨)"
-        mas_residual_tmp = "sub_op("+mas_residual_tmp+",1/(¨rho¨*¨c¨**2)*¨pder¨)"
-        mas_residual_tmp = "sub_op("+mas_residual_tmp+",1/(¨rho¨)*¨rho_convective_term¨)"
     else:
         mas_residual_tmp = "-1*¨rho¨*div(¨v¨,¨base_scalars¨)"
-        mas_residual_tmp = "sub_op("+mas_residual_tmp+",1/(¨c¨**2)*¨pder¨)"
-        mas_residual_tmp = "sub_op("+mas_residual_tmp+",¨rho_convective_term¨)"
     expr['mas_residual'] = mas_residual_tmp
 
     expr['vel_subscale'] = "prod_op(¨tau1¨,¨vel_residual¨)"
@@ -212,9 +175,6 @@ def main(options_dict):
     functional_stab_tmp = f"dot(grad(¨q¨,¨base_scalars¨,{trans_str}),¨vel_subscale¨)"
     if not divide_by_rho:
         functional_stab_tmp = "prod_op(¨rho¨,"+functional_stab_tmp+")"
-    expr['functional_stab_aux1'] = f"contract(¨vconv¨,grad(¨w¨,¨base_scalars¨,{trans_str}))"
-    functional_stab_tmp = "add_op("+functional_stab_tmp+",¨rho¨*dot(¨functional_stab_aux1¨,¨vel_subscale¨))"
-    functional_stab_tmp = "add_op("+functional_stab_tmp+",¨rho¨*div(¨vconv¨,¨base_scalars¨)*dot(¨w¨,¨vel_subscale¨))"
     functional_stab_tmp = "sub_op("+functional_stab_tmp+",¨sigma¨*dot(¨w¨,¨vel_subscale¨))"
     functional_stab_tmp = "add_op("+functional_stab_tmp+",div(¨w¨,¨base_scalars¨)*¨mas_subscale¨)"
     expr['functional_stab'] = functional_stab_tmp

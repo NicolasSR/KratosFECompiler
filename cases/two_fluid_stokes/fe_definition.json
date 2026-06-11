@@ -1,0 +1,436 @@
+{
+    "config_settings": {
+        "transpose_gradients_flag": false
+    },
+    "functional_ssa": [
+        {
+            "AST": {
+                "args": [
+                    "w",
+                    "fg"
+                ],
+                "op": "dot_prod"
+            },
+            "name": "term1"
+        },
+        {
+            "AST": {
+                "args": [
+                    "rho",
+                    {
+                        "args": [
+                            "w",
+                            "acchg"
+                        ],
+                        "op": "dot_prod"
+                    }
+                ],
+                "op": "mult"
+            },
+            "name": "term2"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "w"
+                        ],
+                        "op": "grad"
+                    },
+                    "stress"
+                ],
+                "op": "double_contract"
+            },
+            "name": "term3"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "w"
+                        ],
+                        "op": "div"
+                    },
+                    "pg"
+                ],
+                "op": "mult"
+            },
+            "name": "term4"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "w"
+                        ],
+                        "op": "div"
+                    },
+                    "ps"
+                ],
+                "op": "mult"
+            },
+            "name": "term5"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "q",
+                            {
+                                "args": [
+                                    "v"
+                                ],
+                                "op": "div"
+                            }
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "unary_minus"
+            },
+            "name": "term6"
+        },
+        {
+            "AST": {
+                "args": [
+                    "rho",
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "q"
+                                ],
+                                "op": "grad"
+                            },
+                            "vs"
+                        ],
+                        "op": "dot_prod"
+                    }
+                ],
+                "op": "mult"
+            },
+            "name": "term7"
+        },
+        {
+            "AST": {
+                "args": [
+                    "tau1",
+                    {
+                        "args": [
+                            "f",
+                            {
+                                "args": [
+                                    "rho",
+                                    "accel"
+                                ],
+                                "op": "mult"
+                            }
+                        ],
+                        "op": "subtract"
+                    }
+                ],
+                "op": "mult"
+            },
+            "name": "vs_aux"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "w"
+                        ],
+                        "op": "grad"
+                    },
+                    {
+                        "args": [
+                            "C",
+                            {
+                                "args": [
+                                    "vs_aux"
+                                ],
+                                "op": "symgrad"
+                            }
+                        ],
+                        "op": "double_contract"
+                    }
+                ],
+                "op": "double_contract"
+            },
+            "name": "term8"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            {
+                                                "args": [
+                                                    {
+                                                        "args": [
+                                                            {
+                                                                "args": [
+                                                                    "term1",
+                                                                    "term2"
+                                                                ],
+                                                                "op": "subtract"
+                                                            },
+                                                            "term3"
+                                                        ],
+                                                        "op": "subtract"
+                                                    },
+                                                    "term4"
+                                                ],
+                                                "op": "add"
+                                            },
+                                            "term5"
+                                        ],
+                                        "op": "add"
+                                    },
+                                    "term6"
+                                ],
+                                "op": "add"
+                            },
+                            "term7"
+                        ],
+                        "op": "add"
+                    },
+                    "term8"
+                ],
+                "op": "subtract"
+            },
+            "name": "functional_rhs"
+        },
+        {
+            "AST": {
+                "args": [
+                    "C",
+                    {
+                        "args": [
+                            "v"
+                        ],
+                        "op": "symgrad"
+                    }
+                ],
+                "op": "double_contract"
+            },
+            "name": "expl_stress"
+        },
+        {
+            "AST": {
+                "args": [
+                    "p"
+                ],
+                "op": "grad"
+            },
+            "name": "expl_grad_p"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "bdf0",
+                                    "v"
+                                ],
+                                "op": "mult"
+                            },
+                            {
+                                "args": [
+                                    "bdf1",
+                                    "vn"
+                                ],
+                                "op": "mult"
+                            }
+                        ],
+                        "op": "add"
+                    },
+                    {
+                        "args": [
+                            "bdf2",
+                            "vnn"
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "add"
+            },
+            "name": "accel"
+        },
+        {
+            "AST": {
+                "args": [
+                    "tau1",
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "fg",
+                                    {
+                                        "args": [
+                                            "rho",
+                                            "acchg"
+                                        ],
+                                        "op": "mult"
+                                    }
+                                ],
+                                "op": "subtract"
+                            },
+                            "grad_pg"
+                        ],
+                        "op": "subtract"
+                    }
+                ],
+                "op": "mult"
+            },
+            "name": "vs"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "tau2",
+                            "rho"
+                        ],
+                        "op": "mult"
+                    },
+                    {
+                        "args": [
+                            "v"
+                        ],
+                        "op": "div"
+                    }
+                ],
+                "op": "mult"
+            },
+            "name": "ps"
+        }
+    ],
+    "quantities": {
+        "defined_functions": [
+            {
+                "symbol": "ps",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "vs",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "accel",
+                "tensor_rank": "1"
+            }
+        ],
+        "nodal_vars": [
+            {
+                "symbol": "f",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "vn",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "vnn",
+                "tensor_rank": "1"
+            }
+        ],
+        "numerical_vars": [],
+        "symbolic_vars": [
+            {
+                "symbol": "fg",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "acchg",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "stress",
+                "symmetric": true,
+                "use_voigt_notation": true,
+                "tensor_rank": "2"
+            },
+            {
+                "symbol": "pg",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "C",
+                "symmetric": true,
+                "third_symmetry": true,
+                "use_voigt_notation": true,
+                "tensor_rank": "4"
+            },
+            {
+                "symbol": "grad_pg",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "vg",
+                "tensor_rank": "1"
+            }
+        ],
+        "constant_vars": [
+            {
+                "symbol": "bdf0",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "bdf1",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "bdf2",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "tau1",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "tau2",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "rho",
+                "tensor_rank": "0"
+            }
+        ],
+        "undefined_functions": [],
+        "unknown_vars": [
+            {
+                "symbol": "v",
+                "tensor_rank": "1",
+                "test_function_symbol": "w"
+            },
+            {
+                "symbol": "p",
+                "tensor_rank": "0",
+                "test_function_symbol": "q"
+            }
+        ]
+    },
+    "substitutions": {
+        "pre_lhs": [
+            ["vg", "v"],
+            ["grad_pg", "expl_grad_p"],
+            ["pg", "p"],
+            ["fg", "f"],
+            ["acchg", "accel"],
+            ["stress", "expl_stress"]
+        ],
+        "post_lhs": []
+    }
+}

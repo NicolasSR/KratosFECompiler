@@ -317,7 +317,7 @@ operators:
         args:
           - op: "slice"
             args: ["a", 1, null]
-          - op: "b"
+          - "b"
     output:
       rank: 1
       dim:
@@ -376,7 +376,7 @@ operators:
     code_token: "mat_cofactor"
     description: "Cofactor of a matrix."
     arity: 1
-    latex: "\\text{Cof}({a})"
+    latex: "\\text{{Cof}}({a})"
     needs_parentheses_when_exp: false
     constraints:
       rank:

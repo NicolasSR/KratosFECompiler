@@ -1,12 +1,12 @@
 {
     "applied_configuration": {
         "dim": 3,
-        "nnodes": 4,
+        "nnodes": 8,
         "divide_by_rho": true,
         "ASGS_stabilization": true
     },
     "compatibilities_dict": {
-        "2": [3],
-        "3": [4]
+        "2": [3,4],
+        "3": [4,6,8]
     }
 }

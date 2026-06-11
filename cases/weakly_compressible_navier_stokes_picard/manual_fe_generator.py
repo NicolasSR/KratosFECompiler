@@ -27,11 +27,13 @@ def main(options_dict):
     divide_by_rho = options_dict["divide_by_rho"]
     ASGS_stabilization = options_dict["ASGS_stabilization"]
 
-    # Define further options based on the use of NavierStokes
+    # Define further options based on formulation "WeaklyCompressibleNavierStokes"
     darcy_term = True
     convective_term = True
     artificial_compressibility = True
-    linearisation = "FullNR" # Convective term linearisation type. Options: "Picard", "FullNR"
+
+    # In this case we use Picard
+    linearisation = "Picard" # Convective term linearisation type. Options: "Picard", "FullNR"
 
     info_msg = "\n"
     info_msg += "Element generator settings:\n"

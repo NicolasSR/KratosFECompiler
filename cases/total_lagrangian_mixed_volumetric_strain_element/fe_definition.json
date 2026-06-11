@@ -1,0 +1,539 @@
+{
+    "config_settings": {
+        "transpose_gradients_flag": true
+    },
+    "functional_ssa": [
+        {
+            "name": "term1",
+            "AST": {
+                "args": [
+                    "w",
+                    {
+                        "args": [
+                            "rho_o",
+                            "b_o"
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "dot_prod"
+            }
+        },
+        {
+            "name": "term2",
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "w"
+                        ],
+                        "op": "grad"
+                    },
+                    {
+                        "args": [
+                            "F",
+                            "S"
+                        ],
+                        "op": "matrix_prod"
+                    }
+                ],
+                "op": "double_contract"
+            }
+        },
+        {
+            "name": "term3_aux1",
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            {
+                                                "args": [
+                                                    "theta",
+                                                    {
+                                                        "args": [
+                                                            {
+                                                                "args": [
+                                                                    2,
+                                                                    "d"
+                                                                ],
+                                                                "op": "subtract"
+                                                            },
+                                                            "d"
+                                                        ],
+                                                        "op": "divide"
+                                                    }
+                                                ],
+                                                "op": "pow"
+                                            },
+                                            "d"
+                                        ],
+                                        "op": "divide"
+                                    },
+                                    {
+                                        "args": [
+                                            "J",
+                                            {
+                                                "args": [
+                                                    {
+                                                        "args": [
+                                                            2,
+                                                            "d"
+                                                        ],
+                                                        "op": "divide"
+                                                    }
+                                                ],
+                                                "op": "unary_minus"
+                                            }
+                                        ],
+                                        "op": "pow"
+                                    }
+                                ],
+                                "op": "mult"
+                            },
+                            "tau_theta"
+                        ],
+                        "op": "mult"
+                    },
+                    {
+                        "args": [
+                            "theta",
+                            "J"
+                        ],
+                        "op": "subtract"
+                    }
+                ],
+                "op": "mult"
+            }
+        },
+        {
+            "name": "term3_aux2",
+            "AST": {
+                "args": [
+                    "C",
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "F"
+                                ],
+                                "op": "matrix_transpose"
+                            },
+                            "F"
+                        ],
+                        "op": "matrix_prod"
+                    }
+                ],
+                "op": "double_contract"
+            }
+        },
+        {
+            "name": "term3",
+            "AST": {
+                "args": [
+                    "term3_aux1",
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "w"
+                                ],
+                                "op": "grad"
+                            },
+                            "term3_aux2"
+                        ],
+                        "op": "double_contract"
+                    }
+                ],
+                "op": "mult"
+            }
+        },
+        {
+            "name": "term4",
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    1,
+                                    "tau_theta"
+                                ],
+                                "op": "subtract"
+                            },
+                            "q"
+                        ],
+                        "op": "mult"
+                    },
+                    {
+                        "args": [
+                            "theta",
+                            "J"
+                        ],
+                        "op": "subtract"
+                    }
+                ],
+                "op": "mult"
+            }
+        },
+        {
+            "name": "term5_aux",
+            "AST": {
+                "args": [
+                    "cofF",
+                    {
+                        "args": [
+                            "q"
+                        ],
+                        "op": "grad"
+                    }
+                ],
+                "op": "matrix_vector_prod"
+            }
+        },
+        {
+            "name": "term5",
+            "AST": {
+                "args": [
+                    "term5_aux",
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "tau_u",
+                                    "rho_o"
+                                ],
+                                "op": "mult"
+                            },
+                            "b_o"
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "dot_prod"
+            }
+        },
+        {
+            "name": "term6_aux",
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "tau_u",
+                            "d"
+                        ],
+                        "op": "divide"
+                    },
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "J",
+                                    "theta"
+                                ],
+                                "op": "divide"
+                            },
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            "d",
+                                            2
+                                        ],
+                                        "op": "subtract"
+                                    },
+                                    "d"
+                                ],
+                                "op": "divide"
+                            }
+                        ],
+                        "op": "pow"
+                    }
+                ],
+                "op": "mult"
+            }
+        },
+        {
+            "name": "term6",
+            "AST": {
+                "args": [
+                    "term6_aux",
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "q"
+                                ],
+                                "op": "grad"
+                            },
+                            {
+                                "args": [
+                                    "term3_aux2",
+                                    {
+                                        "args": [
+                                            "theta"
+                                        ],
+                                        "op": "grad"
+                                    }
+                                ],
+                                "op": "matrix_vector_prod"
+                            }
+                        ],
+                        "op": "dot_prod"
+                    }
+                ],
+                "op": "mult"
+            }
+        },
+        {
+            "name": "functional_rhs",
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            {
+                                                "args": [
+                                                    "term1",
+                                                    "term2"
+                                                ],
+                                                "op": "subtract"
+                                            },
+                                            "term3"
+                                        ],
+                                        "op": "add"
+                                    },
+                                    "term4"
+                                ],
+                                "op": "add"
+                            },
+                            "term5"
+                        ],
+                        "op": "add"
+                    },
+                    "term6"
+                ],
+                "op": "add"
+            }
+        },
+        {
+            "name": "F_bar",
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "J",
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            1,
+                                            "d"
+                                        ],
+                                        "op": "divide"
+                                    }
+                                ],
+                                "op": "unary_minus"
+                            }
+                        ],
+                        "op": "pow"
+                    },
+                    "F"
+                ],
+                "op": "mult"
+            }
+        },
+        {
+            "name": "F_bar_sq",
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "F_bar"
+                        ],
+                        "op": "matrix_transpose"
+                    },
+                    "F_bar"
+                ],
+                "op": "matrix_prod"
+            }
+        },
+        {
+            "name": "E",
+            "AST": {
+                "args": [
+                    0.5,
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            "theta",
+                                            {
+                                                "args": [
+                                                    2,
+                                                    "d"
+                                                ],
+                                                "op": "divide"
+                                            }
+                                        ],
+                                        "op": "pow"
+                                    },
+                                    "F_bar_sq"
+                                ],
+                                "op": "mult"
+                            },
+                            "I"
+                        ],
+                        "op": "subtract"
+                    }
+                ],
+                "op": "mult"
+            }
+        },
+        {
+            "name": "F",
+            "AST": {
+                "args": [
+                    "I",
+                    {
+                        "args": [
+                            "u"
+                        ],
+                        "op": "grad"
+                    }
+                ],
+                "op": "add"
+            }
+        },
+        {
+            "name": "J",
+            "AST": {
+                "args": [
+                    "F"
+                ],
+                "op": "matrix_determinant"
+            }
+        },
+        {
+            "name": "cofF",
+            "AST": {
+                "args": [
+                    "F"
+                ],
+                "op": "matrix_cofactor"
+            }
+        }
+    ],
+    "quantities": {
+        "undefined_functions": [
+            {
+                "dependencies": "dofs",
+                "symbol": "Efun",
+                "tensor_rank": "2"
+            },
+            {
+                "dependencies": "Efun",
+                "symbol": "Sfun",
+                "tensor_rank": "2"
+            }
+        ],
+        "nodal_vars": [],
+        "symbolic_vars": [
+            {
+                "symbol": "rho_o",
+                "latex": "\\rho_{o}",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "b_o",
+                "latex": "b_{o}",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "S",
+                "symmetric": true,
+                "use_voigt_notation": true,
+                "tensor_rank": "2"
+            },
+            {
+                "symbol": "tau_theta",
+                "tensor_rank": "0",
+                "latex": "\\tau_{\\theta}",
+                "positive": true
+            },
+            {
+                "symbol": "C",
+                "symmetric": true,
+                "third_symmetry": true,
+                "use_voigt_notation": true,
+                "tensor_rank": "4"
+            },
+            {
+                "symbol": "tau_u",
+                "tensor_rank": "0",
+                "latex": "\\tau_{u}",
+                "positive": true
+            }
+        ],
+        "constant_vars": [],
+        "defined_functions": [
+            {
+                "symbol": "F",
+                "tensor_rank": "2"
+            },
+            {
+                "symbol": "J",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "cofF",
+                "latex": "\\mathrm{cof}F",
+                "tensor_rank": "2"
+            }
+        ],
+        "numerical_vars": [
+            {
+                "symbol": "d",
+                "tensor_rank": "0",
+                "value": "2"
+            },
+            {
+                "symbol": "I",
+                "tensor_rank": "2",
+                "value": "identity"
+            }
+        ],
+        "unknown_vars": [
+            {
+                "symbol": "u",
+                "tensor_rank": "1",
+                "test_function_symbol": "w"
+            },
+            {
+                "symbol": "theta",
+                "latex": "\\theta",
+                "tensor_rank": "0",
+                "test_function_symbol": "q"
+            }
+        ]
+    },
+    "substitutions": {
+        "pre_lhs": [
+            ["S","Sfun"]
+        ],
+        "post_lhs": [
+            [{"op": "deriv", "args": ["Sfun","Efun"]},"C"],
+            [{"op": "deriv", "args": ["Efun","dofs"]},{"op": "deriv", "args": ["E","dofs"]}],
+            ["Sfun","S"],
+            ["Efun","E"]
+        ]
+    }
+}

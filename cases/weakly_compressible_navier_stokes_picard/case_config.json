@@ -1,7 +1,7 @@
 {
     "applied_configuration": {
-        "dim": 3,
-        "nnodes": 4,
+        "dim": 2,
+        "nnodes": 3,
         "divide_by_rho": true,
         "ASGS_stabilization": true
     },

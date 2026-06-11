@@ -200,10 +200,10 @@ class NumericCPPComparingEngine():
         max_lhs = 0
         for i in range(n):
             values_dict = self.generate_values_set()
-            cresult_rhs_auto, result_lhs_auto = self.compute_auto(values_dict)
+            result_rhs_auto, result_lhs_auto = self.compute_auto(values_dict)
             result_rhs_manual, result_lhs_manual = self.compute_manual(values_dict)
 
-            diff_rhs = cresult_rhs_auto-result_rhs_manual
+            diff_rhs = result_rhs_auto-result_rhs_manual
             diff_lhs = result_lhs_auto-result_lhs_manual
 
             max_rhs = max(max_rhs,np.max(np.abs(diff_rhs)))

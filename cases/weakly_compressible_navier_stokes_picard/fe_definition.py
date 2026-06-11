@@ -1,26 +1,18 @@
+## Associated paper:
+## https://www.sciencedirect.com/science/article/pii/S0045782523002001
+
 from collections import OrderedDict
 
 from lib.basic_classes import DofsIndicator
 from kratos_fe_compiler.compiler import compile
-
-INPUT_COMPATIBILITIES_DICT = {
-    2: [3],
-    3: [4]
-}
     
 def main(options_dict):
 
     ## Symbolic generation settings
     dim = options_dict["dim"]
     nnodes = options_dict["nnodes"]
-    formulation = "WeaklyCompressibleNavierStokes"
     divide_by_rho = options_dict["divide_by_rho"]
     ASGS_stabilization = options_dict["ASGS_stabilization"]
-    
-    ## Check that formulation type, dim and number of nodes are compatible:
-    if (not dim in INPUT_COMPATIBILITIES_DICT.keys()) or (not nnodes in INPUT_COMPATIBILITIES_DICT[dim]):
-        err_msg = "Wrong Dimensions or Number of Nodes for formulation " + formulation
-        raise Exception(err_msg)
 
     # Input for compiler
 
@@ -72,8 +64,8 @@ def main(options_dict):
             'symbol': 'c',
             'tensor_rank': 0
         },{
-            'symbol': 'vmesh',
-            'latex': 'v_{mesh}',
+            'symbol': 'vconv',
+            'latex': 'v_{conv}',
             'tensor_rank': 1
         }
         ]
@@ -155,7 +147,6 @@ def main(options_dict):
     expr['tau1_denom_aux2'] = "¨stab_c1¨*¨mu¨/¨h¨**2"
     expr['tau1_denom_aux3'] = "¨stab_c3¨*¨sigma¨/¨h¨"
     expr['tau2_aux1'] = "¨stab_c3¨*¨sigma¨/¨stab_c1¨"
-    expr['vconv'] = "sub_op(¨v¨,¨vmesh¨)"
     expr['stab_norm_a'] = "norm(¨vconv¨)"
     expr['tau1_denom_aux4'] = "¨stab_c2¨*¨rho¨*¨stab_norm_a¨/¨h¨"
     expr['tau1_denom'] = "add_op(¨tau1_denom_aux1¨,¨tau1_denom_aux2¨,¨tau1_denom_aux3¨,¨tau1_denom_aux4¨)"

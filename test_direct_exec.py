@@ -1,3 +1,4 @@
+"""
 import re
 from collections import OrderedDict
 
@@ -110,3 +111,4 @@ with material_coords_system:
     # print('RHS functional, array form:')
     print(continuous_out)
     print(latex_out_cont_expanded)
+"""

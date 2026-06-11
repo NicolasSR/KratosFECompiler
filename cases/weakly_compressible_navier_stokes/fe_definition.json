@@ -1,0 +1,1156 @@
+{
+    "config_settings": {
+        "ASGS_stabilization": true,
+        "divide_by_rho": true,
+        "transpose_gradients_flag": false
+    },
+    "functional_ssa": [
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "rho",
+                            "dyn_tau"
+                        ],
+                        "op": "mult"
+                    },
+                    "dt"
+                ],
+                "op": "divide"
+            },
+            "name": "tau1_denom_aux1"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "stab_c1",
+                            "mu"
+                        ],
+                        "op": "mult"
+                    },
+                    {
+                        "args": [
+                            "h",
+                            2
+                        ],
+                        "op": "pow"
+                    }
+                ],
+                "op": "divide"
+            },
+            "name": "tau1_denom_aux2"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "stab_c3",
+                            "sigma"
+                        ],
+                        "op": "mult"
+                    },
+                    "h"
+                ],
+                "op": "divide"
+            },
+            "name": "tau1_denom_aux3"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "stab_c3",
+                            "sigma"
+                        ],
+                        "op": "mult"
+                    },
+                    "stab_c1"
+                ],
+                "op": "divide"
+            },
+            "name": "tau2_aux1"
+        },
+        {
+            "AST": {
+                "args": [
+                    "v",
+                    "vmesh"
+                ],
+                "op": "subtract"
+            },
+            "name": "vconv"
+        },
+        {
+            "AST": {
+                "args": [
+                    "vconv"
+                ],
+                "op": "norm"
+            },
+            "name": "stab_norm_a"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "stab_c2",
+                                    "rho"
+                                ],
+                                "op": "mult"
+                            },
+                            "stab_norm_a"
+                        ],
+                        "op": "mult"
+                    },
+                    "h"
+                ],
+                "op": "divide"
+            },
+            "name": "tau1_denom_aux4"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "tau1_denom_aux1",
+                                    "tau1_denom_aux2"
+                                ],
+                                "op": "add"
+                            },
+                            "tau1_denom_aux3"
+                        ],
+                        "op": "add"
+                    },
+                    "tau1_denom_aux4"
+                ],
+                "op": "add"
+            },
+            "name": "tau1_denom"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            "stab_c2",
+                                            "rho"
+                                        ],
+                                        "op": "mult"
+                                    },
+                                    "stab_norm_a"
+                                ],
+                                "op": "mult"
+                            },
+                            "h"
+                        ],
+                        "op": "mult"
+                    },
+                    "stab_c1"
+                ],
+                "op": "divide"
+            },
+            "name": "tau2_aux2"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "mu",
+                            "tau2_aux1"
+                        ],
+                        "op": "add"
+                    },
+                    "tau2_aux2"
+                ],
+                "op": "add"
+            },
+            "name": "tau2"
+        },
+        {
+            "AST": {
+                "args": [
+                    1,
+                    "tau1_denom"
+                ],
+                "op": "divide"
+            },
+            "name": "tau1"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "bdf0",
+                                    "v"
+                                ],
+                                "op": "mult"
+                            },
+                            {
+                                "args": [
+                                    "bdf1",
+                                    "vn"
+                                ],
+                                "op": "mult"
+                            }
+                        ],
+                        "op": "add"
+                    },
+                    {
+                        "args": [
+                            "bdf2",
+                            "vnn"
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "add"
+            },
+            "name": "accel"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "bdf0",
+                                    "p"
+                                ],
+                                "op": "mult"
+                            },
+                            {
+                                "args": [
+                                    "bdf1",
+                                    "pn"
+                                ],
+                                "op": "mult"
+                            }
+                        ],
+                        "op": "add"
+                    },
+                    {
+                        "args": [
+                            "bdf2",
+                            "pnn"
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "add"
+            },
+            "name": "pder"
+        },
+        {
+            "AST": {
+                "args": [
+                    "vconv",
+                    {
+                        "args": [
+                            "v"
+                        ],
+                        "op": "grad"
+                    }
+                ],
+                "op": "contract"
+            },
+            "name": "convective_term"
+        },
+        {
+            "AST": {
+                "args": [
+                    "vconv",
+                    {
+                        "args": [
+                            "rho"
+                        ],
+                        "op": "grad"
+                    }
+                ],
+                "op": "dot_prod"
+            },
+            "name": "rho_convective_term"
+        },
+        {
+            "AST": {
+                "args": [
+                    "rho",
+                    {
+                        "args": [
+                            "w",
+                            "f"
+                        ],
+                        "op": "dot_prod"
+                    }
+                ],
+                "op": "mult"
+            },
+            "name": "func_aux1"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "rho",
+                            {
+                                "args": [
+                                    "w",
+                                    "accel"
+                                ],
+                                "op": "dot_prod"
+                            }
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "unary_minus"
+            },
+            "name": "func_aux2"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "w"
+                                ],
+                                "op": "grad"
+                            },
+                            "stress"
+                        ],
+                        "op": "double_contract"
+                    }
+                ],
+                "op": "unary_minus"
+            },
+            "name": "func_aux3"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "w"
+                        ],
+                        "op": "div"
+                    },
+                    "p"
+                ],
+                "op": "mult"
+            },
+            "name": "func_aux4"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "sigma",
+                            {
+                                "args": [
+                                    "w",
+                                    {
+                                        "args": [
+                                            "v",
+                                            "v_sol_frac"
+                                        ],
+                                        "op": "subtract"
+                                    }
+                                ],
+                                "op": "dot_prod"
+                            }
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "unary_minus"
+            },
+            "name": "func_aux5"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "v"
+                                ],
+                                "op": "div"
+                            },
+                            "q"
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "unary_minus"
+            },
+            "name": "func_aux6"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "rho",
+                                    "q"
+                                ],
+                                "op": "mult"
+                            },
+                            {
+                                "args": [
+                                    "v"
+                                ],
+                                "op": "div"
+                            }
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "unary_minus"
+            },
+            "name": "func_aux7"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            {
+                                                "args": [
+                                                    "func_aux1",
+                                                    "func_aux2"
+                                                ],
+                                                "op": "add"
+                                            },
+                                            "func_aux3"
+                                        ],
+                                        "op": "add"
+                                    },
+                                    "func_aux4"
+                                ],
+                                "op": "add"
+                            },
+                            "func_aux5"
+                        ],
+                        "op": "add"
+                    },
+                    "func_aux6"
+                ],
+                "op": "add"
+            },
+            "name": "func_div_rho_aux1"
+        },
+        {
+            "AST": {
+                "args": [
+                    "func_div_rho_aux1",
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            1,
+                                            {
+                                                "args": [
+                                                    "rho",
+                                                    {
+                                                        "args": [
+                                                            "c",
+                                                            2
+                                                        ],
+                                                        "op": "pow"
+                                                    }
+                                                ],
+                                                "op": "mult"
+                                            }
+                                        ],
+                                        "op": "divide"
+                                    },
+                                    "q"
+                                ],
+                                "op": "mult"
+                            },
+                            "pder"
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "subtract"
+            },
+            "name": "func_div_rho_aux2"
+        },
+        {
+            "AST": {
+                "args": [
+                    "func_div_rho_aux2",
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            1,
+                                            "rho"
+                                        ],
+                                        "op": "divide"
+                                    },
+                                    "q"
+                                ],
+                                "op": "mult"
+                            },
+                            "rho_convective_term"
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "subtract"
+            },
+            "name": "func_div_rho"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            "func_aux1",
+                                            "func_aux2"
+                                        ],
+                                        "op": "add"
+                                    },
+                                    "func_aux3"
+                                ],
+                                "op": "add"
+                            },
+                            "func_aux4"
+                        ],
+                        "op": "add"
+                    },
+                    "func_aux7"
+                ],
+                "op": "add"
+            },
+            "name": "func_no_div_rho_aux1"
+        },
+        {
+            "AST": {
+                "args": [
+                    "func_no_div_rho_aux1",
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            1,
+                                            {
+                                                "args": [
+                                                    "c",
+                                                    2
+                                                ],
+                                                "op": "pow"
+                                            }
+                                        ],
+                                        "op": "divide"
+                                    },
+                                    "q"
+                                ],
+                                "op": "mult"
+                            },
+                            "pder"
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "subtract"
+            },
+            "name": "func_no_div_rho_aux2"
+        },
+        {
+            "AST": {
+                "args": [
+                    "func_no_div_rho_aux2",
+                    {
+                        "args": [
+                            "q",
+                            "rho_convective_term"
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "subtract"
+            },
+            "name": "func_no_div_rho"
+        },
+        {
+            "AST": {
+                "args": [
+                    "divide_by_rho",
+                    "func_div_rho",
+                    "func_no_div_rho"
+                ],
+                "op": "if"
+            },
+            "name": "func_base_aux1"
+        },
+        {
+            "AST": {
+                "args": [
+                    "func_base_aux1",
+                    {
+                        "args": [
+                            "rho",
+                            {
+                                "args": [
+                                    "w",
+                                    "convective_term"
+                                ],
+                                "op": "dot_prod"
+                            }
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "subtract"
+            },
+            "name": "func_base"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            {
+                                                "args": [
+                                                    "rho",
+                                                    "f"
+                                                ],
+                                                "op": "mult"
+                                            },
+                                            {
+                                                "args": [
+                                                    "rho",
+                                                    "accel"
+                                                ],
+                                                "op": "mult"
+                                            }
+                                        ],
+                                        "op": "subtract"
+                                    },
+                                    {
+                                        "args": [
+                                            "p"
+                                        ],
+                                        "op": "grad"
+                                    }
+                                ],
+                                "op": "subtract"
+                            },
+                            {
+                                "args": [
+                                    "sigma",
+                                    {
+                                        "args": [
+                                            "v",
+                                            "v_sol_frac"
+                                        ],
+                                        "op": "subtract"
+                                    }
+                                ],
+                                "op": "mult"
+                            }
+                        ],
+                        "op": "subtract"
+                    },
+                    {
+                        "args": [
+                            "rho",
+                            "convective_term"
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "subtract"
+            },
+            "name": "vel_residual"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            "v"
+                                        ],
+                                        "op": "div"
+                                    }
+                                ],
+                                "op": "unary_minus"
+                            },
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            1,
+                                            {
+                                                "args": [
+                                                    "rho",
+                                                    {
+                                                        "args": [
+                                                            "c",
+                                                            2
+                                                        ],
+                                                        "op": "pow"
+                                                    }
+                                                ],
+                                                "op": "mult"
+                                            }
+                                        ],
+                                        "op": "divide"
+                                    },
+                                    "pder"
+                                ],
+                                "op": "mult"
+                            }
+                        ],
+                        "op": "subtract"
+                    },
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    1,
+                                    "rho"
+                                ],
+                                "op": "divide"
+                            },
+                            "rho_convective_term"
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "subtract"
+            },
+            "name": "mas_residual_div_rho"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            "rho",
+                                            {
+                                                "args": [
+                                                    "v"
+                                                ],
+                                                "op": "div"
+                                            }
+                                        ],
+                                        "op": "mult"
+                                    }
+                                ],
+                                "op": "unary_minus"
+                            },
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            1,
+                                            {
+                                                "args": [
+                                                    "c",
+                                                    2
+                                                ],
+                                                "op": "pow"
+                                            }
+                                        ],
+                                        "op": "divide"
+                                    },
+                                    "pder"
+                                ],
+                                "op": "mult"
+                            }
+                        ],
+                        "op": "subtract"
+                    },
+                    "rho_convective_term"
+                ],
+                "op": "subtract"
+            },
+            "name": "mas_residual_no_div_rho"
+        },
+        {
+            "AST": {
+                "args": [
+                    "divide_by_rho",
+                    "mas_residual_div_rho",
+                    "mas_residual_no_div_rho"
+                ],
+                "op": "if"
+            },
+            "name": "mas_residual"
+        },
+        {
+            "AST": {
+                "args": [
+                    "tau1",
+                    "vel_residual"
+                ],
+                "op": "mult"
+            },
+            "name": "vel_subscale"
+        },
+        {
+            "AST": {
+                "args": [
+                    "tau2",
+                    "mas_residual"
+                ],
+                "op": "mult"
+            },
+            "name": "mas_subscale"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "q"
+                        ],
+                        "op": "grad"
+                    },
+                    "vel_subscale"
+                ],
+                "op": "dot_prod"
+            },
+            "name": "func_stab_aux1"
+        },
+        {
+            "AST": {
+                "args": [
+                    "divide_by_rho",
+                    "func_stab_aux1",
+                    {
+                        "args": [
+                            "rho",
+                            "func_stab_aux1"
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "if"
+            },
+            "name": "func_stab_aux2"
+        },
+        {
+            "AST": {
+                "args": [
+                    "func_stab_aux2",
+                    {
+                        "args": [
+                            "rho",
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            "vconv",
+                                            {
+                                                "args": [
+                                                    "w"
+                                                ],
+                                                "op": "grad"
+                                            }
+                                        ],
+                                        "op": "contract"
+                                    },
+                                    "vel_subscale"
+                                ],
+                                "op": "dot_prod"
+                            }
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "add"
+            },
+            "name": "func_stab_aux3"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "func_stab_aux3",
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            "rho",
+                                            {
+                                                "args": [
+                                                    "vconv"
+                                                ],
+                                                "op": "div"
+                                            }
+                                        ],
+                                        "op": "mult"
+                                    },
+                                    {
+                                        "args": [
+                                            "w",
+                                            "vel_subscale"
+                                        ],
+                                        "op": "dot_prod"
+                                    }
+                                ],
+                                "op": "mult"
+                            }
+                        ],
+                        "op": "add"
+                    },
+                    {
+                        "args": [
+                            "sigma",
+                            {
+                                "args": [
+                                    "w",
+                                    "vel_subscale"
+                                ],
+                                "op": "dot_prod"
+                            }
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "subtract"
+            },
+            "name": "func_stab_aux4"
+        },
+        {
+            "AST": {
+                "args": [
+                    "func_stab_aux4",
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "w"
+                                ],
+                                "op": "div"
+                            },
+                            "mas_subscale"
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "add"
+            },
+            "name": "func_stab"
+        },
+        {
+            "AST": {
+                "args": [
+                    "ASGS_stabilization",
+                    {
+                        "args": [
+                            "func_base",
+                            "func_stab"
+                        ],
+                        "op": "add"
+                    },
+                    "func_base"
+                ],
+                "op": "if"
+            },
+            "name": "functional_rhs"
+        },
+        {
+            "AST": {
+                "args": [
+                    "C",
+                    {
+                        "args": [
+                            "v"
+                        ],
+                        "op": "symgrad"
+                    }
+                ],
+                "op": "double_contract"
+            },
+            "name": "explicit_stress"
+        }
+    ],
+    "quantities": {
+        "defined_functions": [],
+        "nodal_vars": [
+            {
+                "symbol": "rho",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "vmesh",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "vn",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "vnn",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "pn",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "pnn",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "f",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "v_sol_frac",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "c",
+                "tensor_rank": "0"
+            }
+        ],
+        "numerical_vars": [],
+        "symbolic_vars": [
+            {
+                "positive": true,
+                "symbol": "dyn_tau",
+                "tensor_rank": "0"
+            },
+            {
+                "positive": true,
+                "symbol": "dt",
+                "tensor_rank": "0"
+            },
+            {
+                "positive": true,
+                "symbol": "stab_c1",
+                "tensor_rank": "0"
+            },
+            {
+                "positive": true,
+                "symbol": "mu",
+                "tensor_rank": "0"
+            },
+            {
+                "positive": true,
+                "symbol": "h",
+                "tensor_rank": "0"
+            },
+            {
+                "positive": true,
+                "symbol": "stab_c3",
+                "tensor_rank": "0"
+            },
+            {
+                "positive": true,
+                "symbol": "sigma",
+                "tensor_rank": "0"
+            },
+            {
+                "positive": true,
+                "symbol": "stab_c2",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "stress",
+                "symmetric": true,
+                "use_voigt_notation": true,
+                "tensor_rank": "2"
+            },
+            {
+                "symbol": "C",
+                "symmetric": true,
+                "third_symmetry": true,
+                "use_voigt_notation": true,
+                "tensor_rank": "4"
+            }
+        ],
+        "constant_vars": [
+            {
+                "symbol": "bdf0",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "bdf1",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "bdf2",
+                "tensor_rank": "0"
+            }
+        ],
+        "undefined_functions": [],
+        "unknown_vars": [
+            {
+                "symbol": "v",
+                "tensor_rank": "1",
+                "test_function_symbol": "w"
+            },
+            {
+                "symbol": "p",
+                "tensor_rank": "0",
+                "test_function_symbol": "q"
+            }
+        ]
+    },
+    "substitutions": {
+        "pre_lhs": [
+            ["stress","explicit_stress"]
+        ]
+    }
+}

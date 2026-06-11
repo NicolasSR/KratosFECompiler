@@ -7,8 +7,8 @@ import original_kratos_symbolic.kratos_symbolic_utilities as ksu
 def main(options_dict):
 
     # Symbolic generation settings
-    dim = 2
-    n_nodes = 3 
+    dim = options_dict["dim"]
+    n_nodes = options_dict["nnodes"]
     block_size = dim + 1
     local_size = n_nodes * block_size
 

@@ -23,15 +23,14 @@ def main(options_dict):
     ## Symbolic generation settings
     dim = options_dict["dim"]
     nnodes = options_dict["nnodes"]
-    formulation = "WeaklyCompressibleNavierStokes"
+    formulation = "Stokes"
     divide_by_rho = options_dict["divide_by_rho"]
     ASGS_stabilization = options_dict["ASGS_stabilization"]
 
-    # Define further options based on the use of NavierStokes
-    darcy_term = True
-    convective_term = True
-    artificial_compressibility = True
-    linearisation = "FullNR" # Convective term linearisation type. Options: "Picard", "FullNR"
+    # Define further options based on formulation "Stokes"
+    darcy_term = False
+    convective_term = False
+    artificial_compressibility = False
 
     info_msg = "\n"
     info_msg += "Element generator settings:\n"

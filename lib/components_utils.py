@@ -17,15 +17,3 @@ def get_flat_list_of_components(var):
         return [var[indices] for indices in index_combinations]
     else:
         return [var]
-
-# def get_tuple_subelements(tuple_arg):
-#     from lib.basic_classes import DerivIndicator
-#     for arg in tuple_arg:
-#         out = []
-#         if isinstance(arg, DerivIndicator):
-#             out.extend(arg.get_args_names_list())
-#         elif isinstance(arg, str):
-#             out.append(arg)
-#         else:
-#             raise "Substitution tuples should contain only strings or DerivIndicators"
-#     return out

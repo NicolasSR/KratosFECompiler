@@ -5,6 +5,7 @@ import json
 from docopt import docopt
 
 from kratos_fe_compiler.metadata import VERSION
+from kratos_fe_compiler.compiler import KratosFECompiler
 from lib.logger import main_logger
 
 
@@ -41,30 +42,42 @@ class SymbolicGenerator():
         self.get_case_config()
 
     def get_case_config(self):
-        try:
-            with open(self.case_dir/"case_config.json", 'r') as f:
-                self.case_config = json.load(f)
-        except:
-            print("No case config file available. Proceeding without it")
-            self.case_config = {}
+        with open(self.case_dir/"case_config.json", 'r') as f:
+            case_config = json.load(f)
+        self.applied_config = case_config["applied_configuration"]
+        ## Check that dim and number of nodes are compatible:
+        dim = str(self.applied_config["dim"])
+        nnodes = self.applied_config["nnodes"]
+        ## Check that formulation type, dim and number of nodes are compatible:
+        if (not dim in case_config["compatibilities_dict"].keys()) or (not nnodes in case_config["compatibilities_dict"][dim]):
+            err_msg = "Wrong Dimensions or Number of Nodes"
+            raise Exception(err_msg)
 
-    def call_symbolic_routine(self, routine_script_file_name, output_file_names):
-        routine_script_file_path = self.case_dir / routine_script_file_name
-        if not routine_script_file_path.is_file():
-            raise FileNotFoundError(f"{routine_script_file_name} file not found within case {self.case_name}")
+    def _check_case_directories(self, definition_file_name, output_file_names):
+        definition_file_path = self.case_dir / definition_file_name
+        if not definition_file_path.is_file():
+            raise FileNotFoundError(f"{definition_file_path} file not found within case {self.case_name}")
         self.case_output_dir.mkdir(exist_ok=True)
         if not self.overwrite and any([(self.case_output_dir/n).is_file() for n in output_file_names]):
             raise EnvironmentError(f"Case {case_name} already has results. To overwrite them use the --overwrite option")
+
+    def call_symbolic_routine(self, routine_script_file_name, output_file_names):
+        routine_script_file_path = self.case_dir / routine_script_file_name
+        self._check_case_directories(routine_script_file_name, output_file_names)
         routine_module = importlib.import_module(f"{self.case_import_root}.{routine_script_file_path.stem}")
-        compiler_outputs = routine_module.main(self.case_config)
+        compiler_outputs = routine_module.main(self.applied_config)
         for i in range(len(output_file_names)):
             with open(self.case_output_dir/output_file_names[i], 'w') as f:
                 f.write(compiler_outputs[i])
 
     def run_fe_compiler(self):
-        routine_script_file_name = "fe_definition.py"
+        case_definition_file_name = "fe_definition.json"
         output_file_names = ["RHS.cpp", "LHS.cpp", "latex_prints.md", "cpp_interface.json"]
-        self.call_symbolic_routine(routine_script_file_name, output_file_names)
+        self._check_case_directories(case_definition_file_name, output_file_names)
+        compiler_outputs = KratosFECompiler(self.case_dir/case_definition_file_name).compile(self.applied_config)
+        for i in range(len(output_file_names)):
+            with open(self.case_output_dir/output_file_names[i], 'w') as f:
+                f.write(compiler_outputs[i])
         
     def run_manual(self):
         routine_script_file_name = "manual_fe_generator.py"

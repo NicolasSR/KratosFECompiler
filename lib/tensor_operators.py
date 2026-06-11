@@ -1,5 +1,7 @@
 from typing import Tuple
 
+from sympy import NDimArray
+
 import sympy as sp
 
 def tensor_grad(var:sp.Array, base_scalars: Tuple):
@@ -9,7 +11,7 @@ def tensor_mat_transpose(a:sp.Array):
     assert a.rank()==2
     return sp.permutedims(a,(1,0))
 
-def tensor_transpose_grad(var:sp.Array, base_scalars: Tuple):
+def tensor_grad_transposed(var:sp.Array, base_scalars: Tuple):
     grad = sp.derive_by_array(var, base_scalars)
     var_rank = sp.Array(var).rank()
     base_scalars_rank = sp.Array([*base_scalars]).rank()
@@ -157,7 +159,7 @@ def tensor_vec_outer_prod(a:sp.Array,b:sp.Array):
 def tensor_arrays_flatten_and_combine(input_arrays: Tuple):
     flat_inputs_list = []
     for array in input_arrays:
-        if isinstance(array, sp.Array):
+        if isinstance(array, NDimArray):
             array_list = array.tolist()
             for comp in range(array.rank()-1):
                 array_list_aux=[]

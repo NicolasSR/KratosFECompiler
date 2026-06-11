@@ -10,18 +10,52 @@
                 "tensor_rank": 0,
                 "test_function_symbol": "q"
             }
+        ],
+        "symbolic_vars": [
+            {
+                "symbol": "C",
+                "tensor_rank": 4,
+                "symmetric": true,
+                "third_symmetry": true,
+                "use_voigt_notation": true
+            },
+            {
+                "symbol": "sigma",
+                "latex_str": "\\sigma",
+                "tensor_rank": 2,
+                "symmetric": true,
+                "use_voigt_notation": true
+            }
+        ],
+        "numerical_vars": [
+            {
+                "symbol": "I",
+                "tensor_rank": 2,
+                "value": "identity"
+            }
+        ],
+        "undefined_functions": [
+            {
+                "symbol": "E",
+                "tensor_rank": 2,
+                "dependencies": ["v", "p"]
+            }
         ]
     },
     "functional_ssa": [
         {"name": "aux_1", "AST":{
             "op": "doublecontract",
             "args": [
+                "E",
                 {
-                    "op": "symgrad",
-                    "args": ["w"]
-                },{
-                    "op": "vec_outer_prod",
-                    "args": ["v", "w"]
+                    "op": "doublecontract",
+                    "args": [
+                        "C",
+                        {
+                            "op": "vec_outer_prod",
+                            "args": ["v", "w"]
+                        }
+                    ]
                 }]
         }},
         {"name": "aux_2", "AST":{
@@ -46,7 +80,7 @@
     ],
     "substitutions": {
         "pre_lhs": [],
-        "post_lhs": [[{"op":"array", "args": ["w"]}, {"op":"deriv", "args": ["p","base_scalars"]}]],
+        "post_lhs": [[{"op":"array", "args": ["w"]}, {"op":"array", "args": ["v"]}]],
         "trash": [
             [{"op":"array", "args": ["v"]}, {"op":"array", "args": ["w"]}]
         ]
