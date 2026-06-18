@@ -1,0 +1,14 @@
+{
+    "applied_configuration": {
+        "dim": 2,
+        "nnodes": 3
+    },
+    "compatibilities_dict": {
+        "2": [
+            3
+        ],
+        "3": [
+            4
+        ]
+    }
+}

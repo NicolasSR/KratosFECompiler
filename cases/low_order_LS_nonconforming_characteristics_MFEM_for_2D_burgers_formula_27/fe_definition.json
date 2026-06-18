@@ -1,0 +1,213 @@
+{
+    "config_settings": {
+        "transpose_gradients_flag": false
+    },
+    "functional_ssa": [
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "u_bar_prev",
+                            {
+                                "args": [
+                                    "Delta_t",
+                                    "R"
+                                ],
+                                "op": "mult"
+                            }
+                        ],
+                        "op": "add"
+                    },
+                    {
+                        "args": [
+                            "v",
+                            {
+                                "args": [
+                                    "Delta_t",
+                                    {
+                                        "args": [
+                                            "psi"
+                                        ],
+                                        "op": "div"
+                                    }
+                                ],
+                                "op": "mult"
+                            }
+                        ],
+                        "op": "add"
+                    }
+                ],
+                "op": "mult"
+            },
+            "name": "term1"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "u",
+                            {
+                                "args": [
+                                    "Delta_t",
+                                    {
+                                        "args": [
+                                            "sigma"
+                                        ],
+                                        "op": "div"
+                                    }
+                                ],
+                                "op": "mult"
+                            }
+                        ],
+                        "op": "add"
+                    },
+                    {
+                        "args": [
+                            "v",
+                            {
+                                "args": [
+                                    "Delta_t",
+                                    {
+                                        "args": [
+                                            "psi"
+                                        ],
+                                        "op": "div"
+                                    }
+                                ],
+                                "op": "mult"
+                            }
+                        ],
+                        "op": "add"
+                    }
+                ],
+                "op": "mult"
+            },
+            "name": "term2"
+        },
+        {
+            "AST": {
+                "args": [
+                    "Delta_t",
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            1,
+                                            "gamma"
+                                        ],
+                                        "op": "divide"
+                                    },
+                                    {
+                                        "args": [
+                                            "sigma",
+                                            {
+                                                "args": [
+                                                    "gamma",
+                                                    {
+                                                        "args": [
+                                                            "u"
+                                                        ],
+                                                        "op": "grad"
+                                                    }
+                                                ],
+                                                "op": "mult"
+                                            }
+                                        ],
+                                        "op": "add"
+                                    }
+                                ],
+                                "op": "mult"
+                            },
+                            {
+                                "args": [
+                                    "psi",
+                                    {
+                                        "args": [
+                                            "gamma",
+                                            {
+                                                "args": [
+                                                    "v"
+                                                ],
+                                                "op": "grad"
+                                            }
+                                        ],
+                                        "op": "mult"
+                                    }
+                                ],
+                                "op": "add"
+                            }
+                        ],
+                        "op": "dot_prod"
+                    }
+                ],
+                "op": "mult"
+            },
+            "name": "term3"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "term1",
+                            "term2"
+                        ],
+                        "op": "subtract"
+                    },
+                    "term3"
+                ],
+                "op": "subtract"
+            },
+            "name": "functional_rhs"
+        }
+    ],
+    "quantities": {
+        "constant_vars": [
+            {
+                "positive": true,
+                "symbol": "Delta_t",
+                "tensor_rank": "0"
+            },
+            {
+                "positive": true,
+                "symbol": "gamma",
+                "tensor_rank": "0"
+            }
+        ],
+        "defined_functions": [],
+        "nodal_vars": [
+            {
+                "symbol": "u_bar_prev",
+                "tensor_rank": "0"
+            }
+        ],
+        "numerical_vars": [],
+        "symbolic_vars": [
+            {
+                "symbol": "R",
+                "tensor_rank": "0"
+            }
+        ],
+        "undefined_functions": [],
+        "unknown_vars": [
+            {
+                "symbol": "u",
+                "tensor_rank": "0",
+                "test_function_symbol": "v"
+            },
+            {
+                "symbol": "sigma",
+                "tensor_rank": "1",
+                "test_function_symbol": "psi"
+            }
+        ]
+    },
+    "substitutions": {
+        "post_lhs": [],
+        "pre_lhs": []
+    }
+}

@@ -941,6 +941,8 @@ class DeferredTensorOp(sp.Expr):
             for version_name in config["alternate_version"].keys():
                 if version_name == 'transposed_gradients_flag' and transposed_gradients_flag:
                     field = config["alternate_version"]["transposed_gradients_flag"].get(field_name, field)
+                if version_name == '2D' and ACTIVE_COORD_SYSTEM.get()["coord_symbols"].dim[0] == 2:
+                    field = config["alternate_version"]["2D"].get(field_name, field)
         return field
     
     @staticmethod

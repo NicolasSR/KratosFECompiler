@@ -17,6 +17,7 @@ class DSLInterpreter():
             "divide": self.divide,
             "unary_minus": self.unary_minus,
             "pow": self.pow,
+            "inner_prod": po.inner_prod_op,
             "dot_prod": po.dot_op,
             "contract":po.contract_op,
             "double_contract": po.doublecontract_op,
@@ -25,6 +26,7 @@ class DSLInterpreter():
             "symgrad": po.symgrad_op,
             "div": po.div_op,
             "curl": po.curl_op,
+            "curl_3d": po.curl_3d_op,
             "curl_2d": po.curl_2d_op,
             "matrix_prod": po.matrix_prod_op,
             "matrix_transpose": po.matrix_transpose_op,
@@ -33,13 +35,25 @@ class DSLInterpreter():
             "matrix_inv": po.matrix_inv_op,
             "matrix_cofactor": po.matrix_cofactor_op,
             "cross_prod": po.vector_cross_prod_op,
+            "cross_prod_3d": po.vector_cross_prod_3d_op,
+            "cross_prod_2d": po.vector_cross_prod_2d_op,
             "vec_outer_prod": po.vector_outer_prod_op,
-            "if": self.if_statement
         }
+        # If condition is treated as a special case in the interpreter, to prevent the interpretation of
+        # the non-applying branch
+  
 
     def interpret_single_abs(self,abs):
         print("Interpreting single abs: ", abs)
-        if isinstance(abs["args"], list):
+        if abs["op"] == "if":       # Special case for if condition
+            if len(abs["args"]) != 3:
+                raise ValueError("If statement requires 3 arguments")
+            condition = self.interpret_single_abs(abs["args"][0])
+            if condition:
+                return self.interpret_single_abs(abs["args"][1])
+            else:
+                return self.interpret_single_abs(abs["args"][2])
+        elif isinstance(abs["args"], list):
             for i, arg in enumerate(abs["args"]):
                 if isinstance(arg, dict) and "op" in arg:
                     abs["args"][i] = self.interpret_single_abs(arg)
@@ -109,15 +123,6 @@ class DSLInterpreter():
             return args[0] ** args[1]
         else:
             raise ValueError("Two arguments required in pow function")
-        
-    def if_statement(self, *args):
-        if len(args) == 3:
-            condition = args[0]
-            true_val = args[1]
-            false_val = args[2]
-            return true_val if condition else false_val
-        else:
-            raise ValueError("Three arguments required in If statement")
         
         
 class SubstitutionsDSLInterpreter():

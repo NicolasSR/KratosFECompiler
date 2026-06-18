@@ -2,6 +2,11 @@ from lib.basic_classes import DeferredTensorOp
 
 ## Define tensorial operators
 
+class inner_prod_op(DeferredTensorOp):
+    # It inherits all behavior from DeferredTensorOp 
+    # which uses the YAML definition for 'inner_prod_op'.
+    pass
+
 class norm_op(DeferredTensorOp):
     # It inherits all behavior from DeferredTensorOp 
     # which uses the YAML definition for 'norm_op'.
@@ -43,6 +48,11 @@ class curl_op(DeferredTensorOp):
     # It inherits all behavior from DeferredTensorOp
     # which uses the YAML definition for 'curl_op'.
     pass
+
+class curl_3d_op(DeferredTensorOp):
+    # It inherits all behavior from DeferredTensorOp
+    # which uses the YAML definition for 'curl_3d_op'.
+    pass
         
 class curl_2d_op(DeferredTensorOp):
     # It inherits all behavior from DeferredTensorOp
@@ -82,6 +92,16 @@ class matrix_cofactor_op(DeferredTensorOp):
 class vector_cross_prod_op(DeferredTensorOp):
     # It inherits all behavior from DeferredTensorOp 
     # which uses the YAML definition for 'vector_cross_prod_op'.
+    pass
+
+class vector_cross_prod_3d_op(DeferredTensorOp):
+    # It inherits all behavior from DeferredTensorOp 
+    # which uses the YAML definition for 'vector_cross_prod_3d_op'.
+    pass
+
+class vector_cross_prod_2d_op(DeferredTensorOp):
+    # It inherits all behavior from DeferredTensorOp 
+    # which uses the YAML definition for 'vector_cross_prod_2d_op'.
     pass
 
 class vector_outer_prod_op(DeferredTensorOp):

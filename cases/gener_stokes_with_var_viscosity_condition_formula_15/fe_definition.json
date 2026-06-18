@@ -1,0 +1,88 @@
+{
+    "config_settings": {
+        "transpose_gradients_flag": false
+    },
+    "functional_ssa": [
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "q"
+                                ],
+                                "op": "grad"
+                            },
+                            "n"
+                        ],
+                        "op": "cross_prod"
+                    },
+                    {
+                        "args": [
+                            "nu",
+                            {
+                                "args": [
+                                    "u"
+                                ],
+                                "op": "curl"
+                            }
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "inner_prod"
+            },
+            "name": "functional_rhs"
+        },
+        {
+            "AST": {
+                "args": [
+                    "p",
+                    {
+                        "args": [
+                            "v"
+                        ],
+                        "op": "norm"
+                    }
+                ],
+                "op": "add"
+            },
+            "name": "foo"
+        }
+    ],
+    "quantities": {
+        "constant_vars": [],
+        "defined_functions": [],
+        "nodal_vars": [
+            {
+                "symbol": "nu",
+                "tensor_rank": "0"
+            }
+        ],
+        "numerical_vars": [],
+        "symbolic_vars": [
+            {
+                "symbol": "n",
+                "tensor_rank": "1"
+            }
+        ],
+        "undefined_functions": [],
+        "unknown_vars": [
+            {
+                "symbol": "u",
+                "tensor_rank": "1",
+                "test_function_symbol": "v"
+            },
+            {
+                "symbol": "p",
+                "tensor_rank": "0",
+                "test_function_symbol": "q"
+            }
+        ]
+    },
+    "substitutions": {
+        "post_lhs": [],
+        "pre_lhs": []
+    }
+}

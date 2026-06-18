@@ -1,0 +1,642 @@
+{
+    "config_settings": {
+        "transpose_gradients_flag": false
+    },
+    "functional_ssa": [
+        {
+            "AST": {
+                "args": [
+                    "theta_tilde",
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            "rho",
+                                            {
+                                                "args": [
+                                                    "u"
+                                                ],
+                                                "op": "grad"
+                                            }
+                                        ],
+                                        "op": "mult"
+                                    },
+                                    "v"
+                                ],
+                                "op": "matrix_vector_prod"
+                            },
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            {
+                                                "args": [
+                                                    "u"
+                                                ],
+                                                "op": "grad"
+                                            }
+                                        ],
+                                        "op": "matrix_transpose"
+                                    },
+                                    {
+                                        "args": [
+                                            "mu"
+                                        ],
+                                        "op": "grad"
+                                    }
+                                ],
+                                "op": "matrix_vector_prod"
+                            }
+                        ],
+                        "op": "subtract"
+                    }
+                ],
+                "op": "mult"
+            },
+            "name": "term1_aux"
+        },
+        {
+            "AST": {
+                "args": [
+                    "w",
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "rho",
+                                    "u"
+                                ],
+                                "op": "mult"
+                            },
+                            "term1_aux"
+                        ],
+                        "op": "add"
+                    }
+                ],
+                "op": "dot_prod"
+            },
+            "name": "term1"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "w"
+                        ],
+                        "op": "grad"
+                    },
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "theta_tilde",
+                                    "mu"
+                                ],
+                                "op": "mult"
+                            },
+                            {
+                                "args": [
+                                    "u"
+                                ],
+                                "op": "grad"
+                            }
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "double_contract"
+            },
+            "name": "term2"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "w"
+                                ],
+                                "op": "div"
+                            },
+                            "theta_tilde"
+                        ],
+                        "op": "mult"
+                    },
+                    "p"
+                ],
+                "op": "mult"
+            },
+            "name": "term3"
+        },
+        {
+            "AST": {
+                "args": [
+                    "theta_tilde_prima",
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            {
+                                                "args": [
+                                                    "rho",
+                                                    {
+                                                        "args": [
+                                                            "un"
+                                                        ],
+                                                        "op": "grad"
+                                                    }
+                                                ],
+                                                "op": "mult"
+                                            },
+                                            "un"
+                                        ],
+                                        "op": "matrix_vector_prod"
+                                    },
+                                    {
+                                        "args": [
+                                            "rho",
+                                            "gn"
+                                        ],
+                                        "op": "mult"
+                                    }
+                                ],
+                                "op": "subtract"
+                            },
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            {
+                                                "args": [
+                                                    "un"
+                                                ],
+                                                "op": "grad"
+                                            }
+                                        ],
+                                        "op": "matrix_transpose"
+                                    },
+                                    {
+                                        "args": [
+                                            "mun"
+                                        ],
+                                        "op": "grad"
+                                    }
+                                ],
+                                "op": "matrix_vector_prod"
+                            }
+                        ],
+                        "op": "subtract"
+                    }
+                ],
+                "op": "mult"
+            },
+            "name": "term4_aux"
+        },
+        {
+            "AST": {
+                "args": [
+                    "w",
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "rho",
+                                    {
+                                        "args": [
+                                            "un",
+                                            {
+                                                "args": [
+                                                    "theta_tilde",
+                                                    "g"
+                                                ],
+                                                "op": "mult"
+                                            }
+                                        ],
+                                        "op": "add"
+                                    }
+                                ],
+                                "op": "mult"
+                            },
+                            "term4_aux"
+                        ],
+                        "op": "subtract"
+                    }
+                ],
+                "op": "dot_prod"
+            },
+            "name": "term4"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "w"
+                        ],
+                        "op": "grad"
+                    },
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "theta_tilde_prima",
+                                    "mun"
+                                ],
+                                "op": "mult"
+                            },
+                            {
+                                "args": [
+                                    "un"
+                                ],
+                                "op": "grad"
+                            }
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "double_contract"
+            },
+            "name": "term5"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "w"
+                                ],
+                                "op": "div"
+                            },
+                            "theta_tilde_prima"
+                        ],
+                        "op": "mult"
+                    },
+                    "pn"
+                ],
+                "op": "mult"
+            },
+            "name": "term6"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            {
+                                                "args": [
+                                                    "term1",
+                                                    "term2"
+                                                ],
+                                                "op": "add"
+                                            },
+                                            "term3"
+                                        ],
+                                        "op": "subtract"
+                                    },
+                                    "term4"
+                                ],
+                                "op": "subtract"
+                            },
+                            "term5"
+                        ],
+                        "op": "add"
+                    },
+                    "term6"
+                ],
+                "op": "subtract"
+            },
+            "name": "functional_1"
+        },
+        {
+            "AST": {
+                "args": [
+                    "q",
+                    {
+                        "args": [
+                            "u"
+                        ],
+                        "op": "div"
+                    }
+                ],
+                "op": "mult"
+            },
+            "name": "functional_2"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            1,
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            {
+                                                "args": [
+                                                    1,
+                                                    2
+                                                ],
+                                                "op": "divide"
+                                            },
+                                            {
+                                                "args": [
+                                                    "lambda",
+                                                    2
+                                                ],
+                                                "op": "pow"
+                                            }
+                                        ],
+                                        "op": "mult"
+                                    },
+                                    {
+                                        "args": [
+                                            {
+                                                "args": [
+                                                    "v"
+                                                ],
+                                                "op": "symgrad"
+                                            },
+                                            {
+                                                "args": [
+                                                    "v"
+                                                ],
+                                                "op": "symgrad"
+                                            }
+                                        ],
+                                        "op": "double_contract"
+                                    }
+                                ],
+                                "op": "mult"
+                            }
+                        ],
+                        "op": "add"
+                    },
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "zeta",
+                                    1
+                                ],
+                                "op": "subtract"
+                            },
+                            2
+                        ],
+                        "op": "divide"
+                    }
+                ],
+                "op": "pow"
+            },
+            "name": "term7_aux"
+        },
+        {
+            "AST": {
+                "args": [
+                    "r",
+                    {
+                        "args": [
+                            "mu",
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            "mu_0",
+                                            "mu_inf"
+                                        ],
+                                        "op": "subtract"
+                                    },
+                                    "term7_aux"
+                                ],
+                                "op": "mult"
+                            }
+                        ],
+                        "op": "subtract"
+                    }
+                ],
+                "op": "mult"
+            },
+            "name": "term7"
+        },
+        {
+            "AST": {
+                "args": [
+                    "r",
+                    "mu_inf"
+                ],
+                "op": "mult"
+            },
+            "name": "term8"
+        },
+        {
+            "AST": {
+                "args": [
+                    "term7",
+                    "term8"
+                ],
+                "op": "subtract"
+            },
+            "name": "functional_3"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "functional_1",
+                            "functional_2"
+                        ],
+                        "op": "add"
+                    },
+                    "functional_3"
+                ],
+                "op": "add"
+            },
+            "name": "functional_rhs"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    1,
+                                    {
+                                        "args": [
+                                            "Delta_t",
+                                            "Delta_t_prev"
+                                        ],
+                                        "op": "divide"
+                                    }
+                                ],
+                                "op": "add"
+                            },
+                            "un"
+                        ],
+                        "op": "mult"
+                    },
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "Delta_t",
+                                    "Delta_t_prev"
+                                ],
+                                "op": "divide"
+                            },
+                            "unn"
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "subtract"
+            },
+            "name": "v"
+        },
+        {
+            "AST": {
+                "args": [
+                    "theta",
+                    "Delta_t"
+                ],
+                "op": "mult"
+            },
+            "name": "theta_tilde"
+        },
+        {
+            "AST": {
+                "args": [
+                    "theta_prima",
+                    "Delta_t"
+                ],
+                "op": "mult"
+            },
+            "name": "theta_tilde_prima"
+        }
+    ],
+    "quantities": {
+        "constant_vars": [
+            {
+                "symbol": "rho",
+                "tensor_rank": "0"
+            },
+            {
+                "positive": true,
+                "symbol": "lambda",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "zeta",
+                "tensor_rank": "0"
+            },
+            {
+                "positive": true,
+                "symbol": "mu_0",
+                "tensor_rank": "0"
+            },
+            {
+                "positive": true,
+                "symbol": "mu_inf",
+                "tensor_rank": "0"
+            },
+            {
+                "positive": true,
+                "symbol": "Delta_t",
+                "tensor_rank": "0"
+            },
+            {
+                "positive": true,
+                "symbol": "Delta_t_prev",
+                "tensor_rank": "0"
+            }
+        ],
+        "defined_functions": [
+            {
+                "symbol": "theta_tilde",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "v",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "theta_tilde_prima",
+                "tensor_rank": "0"
+            }
+        ],
+        "nodal_vars": [
+            {
+                "symbol": "un",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "gn",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "mun",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "g",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "pn",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "unn",
+                "tensor_rank": "1"
+            }
+        ],
+        "numerical_vars": [
+            {
+                "symbol": "theta",
+                "tensor_rank": "0",
+                "value": "1"
+            },
+            {
+                "symbol": "theta_prima",
+                "tensor_rank": "0",
+                "value": "0"
+            }
+        ],
+        "symbolic_vars": [],
+        "undefined_functions": [],
+        "unknown_vars": [
+            {
+                "symbol": "u",
+                "tensor_rank": "1",
+                "test_function_symbol": "w"
+            },
+            {
+                "symbol": "mu",
+                "tensor_rank": "0",
+                "test_function_symbol": "r"
+            },
+            {
+                "symbol": "p",
+                "tensor_rank": "0",
+                "test_function_symbol": "q"
+            }
+        ]
+    },
+    "substitutions": {
+        "post_lhs": [],
+        "pre_lhs": []
+    }
+}

@@ -46,7 +46,7 @@ def _get_levi_civita_array(dim):
 def tensor_3D_curl(var:sp.Array, base_scalars: Tuple):
     # curl = e_ijk * D_j(u_k)
     # e_ijk = 3D Levi-Civita symbol
-    assert var.rank()==1 & var.shape[0]==3
+    assert var.rank()==1 and var.shape[0]==3
     grad = tensor_grad(var, base_scalars)
     e_tensor = _get_levi_civita_array(3)
     aux = sp.tensorproduct(e_tensor,grad)
@@ -55,7 +55,7 @@ def tensor_3D_curl(var:sp.Array, base_scalars: Tuple):
 def tensor_2D_curl(var:sp.Array, base_scalars: Tuple):
     # curl = e_jk * D_j(u_k)
     # e_jk = 2D Levi-Civita symbol
-    assert var.rank()==1 & var.shape[0]==2
+    assert var.rank()==1 and var.shape[0]==2
     grad = tensor_grad(var, base_scalars)
     e_tensor = _get_levi_civita_array(2)
     aux = sp.tensorproduct(e_tensor,grad)
@@ -89,6 +89,17 @@ def tensor_doublecontract(a: sp.Array, b: sp.Array):
     # For tensors of rank 2 it's teh same as UFL's inner product. For higher ranks it differs.
     contracted = sp.tensorcontraction(sp.tensorproduct(a,b),(a.rank()-2,a.rank()))
     return sp.tensorcontraction(contracted, (a.rank()-2,a.rank()-1))
+
+def tensor_inner_prod(a, b):
+    if not isinstance(a, sp.Array):
+        assert not isinstance(b, sp.Array)
+        return a*b
+    elif a.rank() == 1:
+        return tensor_vector_dot(a,b)
+    elif a.rank() == 2:
+        return tensor_doublecontract(a,b)
+    else:
+        raise Exception("Inner product not defined for tensors of rank higher than 2")
 
 # def tensor_inner(a: sp.Array, b: sp.Array):
 #     assert a.rank()>=2 and b.rank()>=2
@@ -141,7 +152,7 @@ def tensor_mat_inv(a:sp.Array):
     assert a.rank()==2 and a.shape[0]==a.shape[1]
     return tensor_mat_transpose(tensor_mat_cofactor(a))*tensor_mat_det(a)**(-1)
 
-def tensor_vec_cross_prod(a:sp.Array,b:sp.Array):
+def tensor_vec_cross_prod_3d(a:sp.Array,b:sp.Array):
     assert a.rank()==1 and b.rank()==1 and a.shape[0]==b.shape[0]
     dim = a.shape[0]
     e_tensor = _get_levi_civita_array(dim)
@@ -151,6 +162,14 @@ def tensor_vec_cross_prod(a:sp.Array,b:sp.Array):
     else:
         raise Exception("Only 3D vectors accepted for cross product computation")
     return cross
+
+def tensor_vec_cross_prod_2d(a:sp.Array,b:sp.Array):
+    assert a.rank()==1 and b.rank()==1 and a.shape[0]==2 and b.shape[0]==2
+    a_3d = sp.Array([a[0],a[1],0])
+    b_3d = sp.Array([b[0],b[1],0])
+    cross_prod_3d = tensor_vec_cross_prod_3d(a_3d,b_3d)
+    assert cross_prod_3d[0]==0 and cross_prod_3d[1]==0
+    return cross_prod_3d[2]
 
 def tensor_vec_outer_prod(a:sp.Array,b:sp.Array):
     assert a.rank()==1 and b.rank()==1

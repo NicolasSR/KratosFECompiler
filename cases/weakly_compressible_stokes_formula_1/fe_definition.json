@@ -1,0 +1,701 @@
+{
+    "config_settings": {
+        "ASGS_stabilization": true,
+        "divide_by_rho": true,
+        "transpose_gradients_flag": false
+    },
+    "functional_ssa": [
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "rho",
+                            "dyn_tau"
+                        ],
+                        "op": "mult"
+                    },
+                    "dt"
+                ],
+                "op": "divide"
+            },
+            "name": "tau1_denom_aux1"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "stab_c1",
+                            "mu"
+                        ],
+                        "op": "mult"
+                    },
+                    {
+                        "args": [
+                            "h",
+                            2
+                        ],
+                        "op": "pow"
+                    }
+                ],
+                "op": "divide"
+            },
+            "name": "tau1_denom_aux2"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "stab_c3",
+                            "sigma"
+                        ],
+                        "op": "mult"
+                    },
+                    "h"
+                ],
+                "op": "divide"
+            },
+            "name": "tau1_denom_aux3"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "stab_c3",
+                            "sigma"
+                        ],
+                        "op": "mult"
+                    },
+                    "stab_c1"
+                ],
+                "op": "divide"
+            },
+            "name": "tau2_aux1"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "tau1_denom_aux1",
+                            "tau1_denom_aux2"
+                        ],
+                        "op": "add"
+                    },
+                    "tau1_denom_aux3"
+                ],
+                "op": "add"
+            },
+            "name": "tau1_denom"
+        },
+        {
+            "AST": {
+                "args": [
+                    "mu",
+                    "tau2_aux1"
+                ],
+                "op": "add"
+            },
+            "name": "tau2"
+        },
+        {
+            "AST": {
+                "args": [
+                    1,
+                    "tau1_denom"
+                ],
+                "op": "divide"
+            },
+            "name": "tau1"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "bdf0",
+                                    "v"
+                                ],
+                                "op": "mult"
+                            },
+                            {
+                                "args": [
+                                    "bdf1",
+                                    "vn"
+                                ],
+                                "op": "mult"
+                            }
+                        ],
+                        "op": "add"
+                    },
+                    {
+                        "args": [
+                            "bdf2",
+                            "vnn"
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "add"
+            },
+            "name": "accel"
+        },
+        {
+            "AST": {
+                "args": [
+                    "rho",
+                    {
+                        "args": [
+                            "w",
+                            "f"
+                        ],
+                        "op": "dot_prod"
+                    }
+                ],
+                "op": "mult"
+            },
+            "name": "func_aux1"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "rho",
+                            {
+                                "args": [
+                                    "w",
+                                    "accel"
+                                ],
+                                "op": "dot_prod"
+                            }
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "unary_minus"
+            },
+            "name": "func_aux2"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "w"
+                                ],
+                                "op": "grad"
+                            },
+                            "stress"
+                        ],
+                        "op": "double_contract"
+                    }
+                ],
+                "op": "unary_minus"
+            },
+            "name": "func_aux3"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "w"
+                        ],
+                        "op": "div"
+                    },
+                    "p"
+                ],
+                "op": "mult"
+            },
+            "name": "func_aux4"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "sigma",
+                            {
+                                "args": [
+                                    "w",
+                                    {
+                                        "args": [
+                                            "v",
+                                            "v_sol_frac"
+                                        ],
+                                        "op": "subtract"
+                                    }
+                                ],
+                                "op": "dot_prod"
+                            }
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "unary_minus"
+            },
+            "name": "func_aux5"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "v"
+                                ],
+                                "op": "div"
+                            },
+                            "q"
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "unary_minus"
+            },
+            "name": "func_aux6"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "rho",
+                                    "q"
+                                ],
+                                "op": "mult"
+                            },
+                            {
+                                "args": [
+                                    "v"
+                                ],
+                                "op": "div"
+                            }
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "unary_minus"
+            },
+            "name": "func_aux7"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            {
+                                                "args": [
+                                                    "func_aux1",
+                                                    "func_aux2"
+                                                ],
+                                                "op": "add"
+                                            },
+                                            "func_aux3"
+                                        ],
+                                        "op": "add"
+                                    },
+                                    "func_aux4"
+                                ],
+                                "op": "add"
+                            },
+                            "func_aux5"
+                        ],
+                        "op": "add"
+                    },
+                    "func_aux6"
+                ],
+                "op": "add"
+            },
+            "name": "func_div_rho"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            "func_aux1",
+                                            "func_aux2"
+                                        ],
+                                        "op": "add"
+                                    },
+                                    "func_aux3"
+                                ],
+                                "op": "add"
+                            },
+                            "func_aux4"
+                        ],
+                        "op": "add"
+                    },
+                    "func_aux7"
+                ],
+                "op": "add"
+            },
+            "name": "func_no_div_rho"
+        },
+        {
+            "AST": {
+                "args": [
+                    "divide_by_rho",
+                    "func_div_rho",
+                    "func_no_div_rho"
+                ],
+                "op": "if"
+            },
+            "name": "func_base"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    {
+                                        "args": [
+                                            "rho",
+                                            "f"
+                                        ],
+                                        "op": "mult"
+                                    },
+                                    {
+                                        "args": [
+                                            "rho",
+                                            "accel"
+                                        ],
+                                        "op": "mult"
+                                    }
+                                ],
+                                "op": "subtract"
+                            },
+                            {
+                                "args": [
+                                    "p"
+                                ],
+                                "op": "grad"
+                            }
+                        ],
+                        "op": "subtract"
+                    },
+                    {
+                        "args": [
+                            "sigma",
+                            {
+                                "args": [
+                                    "v",
+                                    "v_sol_frac"
+                                ],
+                                "op": "subtract"
+                            }
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "subtract"
+            },
+            "name": "vel_residual"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "v"
+                        ],
+                        "op": "div"
+                    }
+                ],
+                "op": "unary_minus"
+            },
+            "name": "mas_residual_div_rho"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "rho",
+                            {
+                                "args": [
+                                    "v"
+                                ],
+                                "op": "div"
+                            }
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "unary_minus"
+            },
+            "name": "mas_residual_no_div_rho"
+        },
+        {
+            "AST": {
+                "args": [
+                    "divide_by_rho",
+                    "mas_residual_div_rho",
+                    "mas_residual_no_div_rho"
+                ],
+                "op": "if"
+            },
+            "name": "mas_residual"
+        },
+        {
+            "AST": {
+                "args": [
+                    "tau1",
+                    "vel_residual"
+                ],
+                "op": "mult"
+            },
+            "name": "vel_subscale"
+        },
+        {
+            "AST": {
+                "args": [
+                    "tau2",
+                    "mas_residual"
+                ],
+                "op": "mult"
+            },
+            "name": "mas_subscale"
+        },
+        {
+            "AST": {
+                "args": [
+                    {
+                        "args": [
+                            "q"
+                        ],
+                        "op": "grad"
+                    },
+                    "vel_subscale"
+                ],
+                "op": "dot_prod"
+            },
+            "name": "func_stab_aux1"
+        },
+        {
+            "AST": {
+                "args": [
+                    "divide_by_rho",
+                    "func_stab_aux1",
+                    {
+                        "args": [
+                            "rho",
+                            "func_stab_aux1"
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "if"
+            },
+            "name": "func_stab_aux2"
+        },
+        {
+            "AST": {
+                "args": [
+                    "func_stab_aux2",
+                    {
+                        "args": [
+                            "sigma",
+                            {
+                                "args": [
+                                    "w",
+                                    "vel_subscale"
+                                ],
+                                "op": "dot_prod"
+                            }
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "subtract"
+            },
+            "name": "func_stab_aux3"
+        },
+        {
+            "AST": {
+                "args": [
+                    "func_stab_aux3",
+                    {
+                        "args": [
+                            {
+                                "args": [
+                                    "w"
+                                ],
+                                "op": "div"
+                            },
+                            "mas_subscale"
+                        ],
+                        "op": "mult"
+                    }
+                ],
+                "op": "add"
+            },
+            "name": "func_stab"
+        },
+        {
+            "AST": {
+                "args": [
+                    "ASGS_stabilization",
+                    {
+                        "args": [
+                            "func_base",
+                            "func_stab"
+                        ],
+                        "op": "add"
+                    },
+                    "func_base"
+                ],
+                "op": "if"
+            },
+            "name": "functional_rhs"
+        },
+        {
+            "AST": {
+                "args": [
+                    "C",
+                    {
+                        "args": [
+                            "v"
+                        ],
+                        "op": "symgrad"
+                    }
+                ],
+                "op": "double_contract"
+            },
+            "name": "explicit_stress"
+        }
+    ],
+    "quantities": {
+        "constant_vars": [],
+        "defined_functions": [],
+        "nodal_vars": [
+            {
+                "symbol": "vn",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "vnn",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "f",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "v_sol_frac",
+                "tensor_rank": "1"
+            }
+        ],
+        "numerical_vars": [
+            {
+                "symbol": "stab_c3",
+                "tensor_rank": "0",
+                "value": "0"
+            },
+            {
+                "symbol": "sigma",
+                "tensor_rank": "0",
+                "value": "0"
+            }
+        ],
+        "symbolic_vars": [
+            {
+                "symbol": "rho",
+                "tensor_rank": "0"
+            },
+            {
+                "positive": true,
+                "symbol": "dyn_tau",
+                "tensor_rank": "0"
+            },
+            {
+                "positive": true,
+                "symbol": "dt",
+                "tensor_rank": "0"
+            },
+            {
+                "positive": true,
+                "symbol": "stab_c1",
+                "tensor_rank": "0"
+            },
+            {
+                "positive": true,
+                "symbol": "mu",
+                "tensor_rank": "0"
+            },
+            {
+                "positive": true,
+                "symbol": "h",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "bdf0",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "bdf1",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "bdf2",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "stress",
+                "symmetric": true,
+                "tensor_rank": "2",
+                "use_voigt_notation": true
+            },
+            {
+                "symbol": "C",
+                "symmetric": true,
+                "tensor_rank": "4",
+                "third_symmetry": true,
+                "use_voigt_notation": true
+            }
+        ],
+        "undefined_functions": [],
+        "unknown_vars": [
+            {
+                "symbol": "v",
+                "tensor_rank": "1",
+                "test_function_symbol": "w"
+            },
+            {
+                "symbol": "p",
+                "tensor_rank": "0",
+                "test_function_symbol": "q"
+            }
+        ]
+    },
+    "substitutions": {
+        "pre_lhs": [
+            [
+                "stress",
+                "explicit_stress"
+            ]
+        ]
+    }
+}

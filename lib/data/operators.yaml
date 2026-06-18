@@ -1,4 +1,23 @@
 operators:
+  inner_prod_op:
+    name: "Inner Product, generalized for any tensor rank"
+    code_token: "inner_prod"
+    description: "Computes the inner product of two quantities with equal tensor rank and dimensions."
+    arity: 2
+    latex: "\\langle {a}, {b} \\rangle"
+    needs_parentheses_when_exp: false
+    constraints:
+      rank:
+        op: "eq"
+        args: ["a", "b"]
+      dim:
+        op: "eq"
+        args: ["a", "b"]
+    output:
+      rank: 0
+      dim: "empty_list"
+    implementation: "tensor_inner_prod"
+
   dot_op:
     name: "Dot Product"
     code_token: "dot"
@@ -195,8 +214,49 @@ operators:
     implementation: "tensor_div"
 
   curl_op:
-    name: "Curl of 3D Vector Field"
+    name: "Curl of Vector Field (2D or 3D)"
     code_token: "curl"
+    description: "Curl of Vector Field (2D or 3D) with respect to the reference coordinates defined in the system."
+    arity: 1
+    latex: "\\nabla \\times {a}"
+    needs_parentheses_when_exp: true
+    pass_coords: true
+    constraints:
+      rank:
+        op: "eq"
+        args: ["a", 1]
+      dim:
+        op: "and"
+        args:
+          - op: "eq"
+            args: ["a", [3]]
+          - op: "eq"
+            args: ["coords", [3]]
+    output:
+      rank: 1
+      dim: [3]
+    implementation: "tensor_3D_curl"
+    alternate_version:
+      2D:
+        constraints:
+          rank:
+            op: "eq"
+            args: ["a", 1]
+          dim:
+            op: "and"
+            args:
+              - op: "eq"
+                args: ["a", [2]]
+              - op: "eq"
+                args: ["coords", [2]]
+        output:
+          rank: 0
+          dim: "empty_list"
+        implementation: "tensor_2D_curl"
+  
+  curl_3d_op:
+    name: "Curl of 3D Vector Field"
+    code_token: "curl_3d"
     description: "Curl of 3D Vector Field with respect to the reference coordinates defined in the system."
     arity: 1
     latex: "\\nabla \\times {a}"
@@ -210,9 +270,9 @@ operators:
         op: "and"
         args:
           - op: "eq"
-            args: ["a", 3]
+            args: ["a", [3]]
           - op: "eq"
-            args: ["coords", 3]
+            args: ["coords", [3]]
     output:
       rank: 1
       dim: [3]
@@ -234,9 +294,9 @@ operators:
         op: "and"
         args:
           - op: "eq"
-            args: ["a", 2]
+            args: ["a", [2]]
           - op: "eq"
-            args: ["coords", 2]
+            args: ["coords", [2]]
     output:
       rank: 0
       dim: "empty_list"
@@ -395,9 +455,9 @@ operators:
     implementation: "tensor_mat_cofactor"
 
   vector_cross_prod_op:
-    name: "Vector Cross Product"
+    name: "Vector Cross Product for Vectors (2D or 3D)"
     code_token: "cross_prod"
-    description: "Cross product of two vectors."
+    description: "Cross product of two vectors (2D or 3D)."
     arity: 2
     latex: "{a} \\times {b}"
     needs_parentheses_when_exp: true
@@ -413,13 +473,84 @@ operators:
         op: "and"
         args:
           - op: "eq"
-            args: ["a", 3]
+            args: ["a", [3]]
           - op: "eq"
-            args: ["b", 3]
+            args: ["b", [3]]
     output:
       rank: 1
       dim: [3]
-    implementation: "tensor_vec_cross_prod"
+    implementation: "tensor_vec_cross_prod_3d"
+    alternate_version:
+      2D:
+        constraints:
+          rank:
+            op: "eq"
+            args: ["a", 1]
+          dim:
+            op: "and"
+            args:
+              - op: "eq"
+                args: ["a", [2]]
+              - op: "eq"
+                args: ["b", [2]]
+        output:
+          rank: 0
+          dim: "empty_list"
+        implementation: "tensor_vec_cross_prod_2d"
+
+  vector_cross_prod_3D_op:
+    name: "Vector Cross Product for 3D Vectors"
+    code_token: "cross_prod_3d"
+    description: "Cross product of two 3D vectors."
+    arity: 2
+    latex: "{a} \\times {b}"
+    needs_parentheses_when_exp: true
+    constraints:
+      rank:
+        op: "and"
+        args:
+          - op: "eq"
+            args: ["a", 1]
+          - op: "eq"
+            args: ["b", 1]
+      dim:
+        op: "and"
+        args:
+          - op: "eq"
+            args: ["a", [3]]
+          - op: "eq"
+            args: ["b", [3]]
+    output:
+      rank: 1
+      dim: [3]
+    implementation: "tensor_vec_cross_prod_3d"
+
+  vector_cross_prod_2d_op:
+    name: "Vector Cross Product for 2D Vectors"
+    code_token: "cross_prod_2d"
+    description: "Cross product of two 2D vectors."
+    arity: 2
+    latex: "{a} \\times {b}"
+    needs_parentheses_when_exp: true
+    constraints:
+      rank:
+        op: "and"
+        args:
+          - op: "eq"
+            args: ["a", 1]
+          - op: "eq"
+            args: ["b", 1]
+      dim:
+        op: "and"
+        args:
+          - op: "eq"
+            args: ["a", [2]]
+          - op: "eq"
+            args: ["b", [2]]
+    output:
+      rank: 0
+      dim: "empty_list"
+    implementation: "tensor_vec_cross_prod_2d"
 
   vector_outer_prod_op:
     name: "Vector Outer Product"
