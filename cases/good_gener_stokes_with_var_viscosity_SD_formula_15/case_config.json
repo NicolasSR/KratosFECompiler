@@ -1,0 +1,24 @@
+{
+    "kratos_configuration": {
+        "element_template_path": "generalised_stokes_with_variable_viscosity_cpp_template.cpp",
+        "condition_template_path": "custom_curl_condition_cpp_template.cpp",
+        "element_output_path": "generalised_stokes_with_variable_viscosity.cpp",
+        "condition_output_path": "custom_curl_condition.cpp"
+    },
+    "compatibilities_dict_element": {
+        "2": [
+            3
+        ],
+        "3": [
+            4
+        ]
+    },
+    "compatibilities_dict_condition": {
+        "2": [
+            2
+        ],
+        "3": [
+            3
+        ]
+    }
+}

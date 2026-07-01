@@ -1,14 +1,8 @@
 {
-    "applied_configuration": {
-        "dim": 3,
-        "nnodes": 4
-    },
-    "compatibilities_dict": {
-        "2": [
-            3
-        ],
-        "3": [
-            4
-        ]
+    "kratos_configuration": {
+        "element_template_path": "element_template.cpp",
+        "condition_template_path": "condition_template.cpp",
+        "element_output_path": "element.cpp",
+        "condition_output_path": "condition.cpp"
     }
 }

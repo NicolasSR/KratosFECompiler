@@ -25,6 +25,9 @@ def tensor_symgrad(var:sp.Array, base_scalars: Tuple):
     return(sp.Rational(1,2)*(grad+grad_t))
 
 def tensor_div(var:sp.Array, base_scalars: Tuple):
+    # Right now this is only implemented for rank 1 tensors (vector fields)
+    # For matrices, it should take care of the convention being used for gradients of vectors
+    assert var.rank()==1
     var_grad = tensor_grad(var, base_scalars)
     return sp.tensorcontraction(var_grad, (0, 1))
 

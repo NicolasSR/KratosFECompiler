@@ -20,7 +20,7 @@ class KratosFECompiler():
             self.case_input = json.load(case_input_file)
         self.namespace=CompilerNamespace()
 
-    def compile(self, options_dict):
+    def compile(self, options_dict, functional_name = "functional"):
 
         ## Symbolic generation settings
         dim = options_dict["dim"]
@@ -143,9 +143,9 @@ class KratosFECompiler():
 
             print(self.namespace)
 
-            functional_rhs = self.namespace["functional_rhs"]
-            if "functional_lhs" in self.namespace.keys():
-                functional_lhs = self.namespace["functional_lhs"]
+            functional_rhs = self.namespace[f"{functional_name}_rhs"]
+            if f"{functional_name}_lhs" in self.namespace.keys():
+                functional_lhs = self.namespace[f"{functional_name}_lhs"]
             else:
                 functional_lhs = functional_rhs.copy()
 

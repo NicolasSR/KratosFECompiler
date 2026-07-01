@@ -6,32 +6,38 @@
         {
             "AST": {
                 "args": [
+                    "delta",
                     {
                         "args": [
                             {
                                 "args": [
-                                    "q"
+                                    {
+                                        "args": [
+                                            "q"
+                                        ],
+                                        "op": "grad"
+                                    },
+                                    "n"
                                 ],
-                                "op": "grad"
+                                "op": "cross_prod"
                             },
-                            "n"
-                        ],
-                        "op": "cross_prod"
-                    },
-                    {
-                        "args": [
-                            "nu",
                             {
                                 "args": [
-                                    "u"
+                                    "nu",
+                                    {
+                                        "args": [
+                                            "u"
+                                        ],
+                                        "op": "curl"
+                                    }
                                 ],
-                                "op": "curl"
+                                "op": "mult"
                             }
                         ],
-                        "op": "mult"
+                        "op": "inner_prod"
                     }
                 ],
-                "op": "inner_prod"
+                "op": "mult"
             },
             "name": "functional_rhs"
         },
@@ -62,6 +68,10 @@
         ],
         "numerical_vars": [],
         "symbolic_vars": [
+            {
+                "symbol": "delta",
+                "tensor_rank": "0"
+            },
             {
                 "symbol": "n",
                 "tensor_rank": "1"
