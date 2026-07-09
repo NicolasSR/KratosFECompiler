@@ -171,9 +171,9 @@ void CustomCurlCondition<2,2>::ApplyNeumannCondition(
 
         const double delta_gauss = rCurrentProcessInfo.GetValue(TAUONE);
         
-        //substitute_rhs_2D2N
+        //substitute_condition_rhs_2D3N
 
-        //substitute_lhs_2D2N
+        //substitute_condition_lhs_2D3N
 
     }
 }
@@ -249,9 +249,9 @@ void CustomCurlCondition<3,3>::ApplyNeumannCondition(
 
         const double delta_gauss = rCurrentProcessInfo.GetValue(TAUONE);
         
-        //substitute_rhs_3D3N
+        //substitute_condition_rhs_3D3N
 
-        //substitute_lhs_3D3N
+        //substitute_condition_lhs_3D3N
     }
 }
 

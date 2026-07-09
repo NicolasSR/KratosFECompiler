@@ -1,0 +1,50 @@
+
+const double crRightHandSideVector0 = delta_gauss*w_g*(N[0]*nu_nodes[0] + N[1]*nu_nodes[1])*(DN(0,0)*u_nodes(0,1) - DN(0,1)*u_nodes(0,0) + DN(1,0)*u_nodes(1,1) - DN(1,1)*u_nodes(1,0));
+rRightHandSideVector[0]+=0;
+rRightHandSideVector[1]+=0;
+rRightHandSideVector[2]+=crRightHandSideVector0*(DN(0,0)*n_gauss[1] - DN(0,1)*n_gauss[0]);
+rRightHandSideVector[3]+=0;
+rRightHandSideVector[4]+=0;
+rRightHandSideVector[5]+=crRightHandSideVector0*(DN(1,0)*n_gauss[1] - DN(1,1)*n_gauss[0]);
+
+
+const double crLeftHandSideMatrix0 = delta_gauss*w_g*(N[0]*nu_nodes[0] + N[1]*nu_nodes[1]);
+const double crLeftHandSideMatrix1 = crLeftHandSideMatrix0*(DN(0,0)*n_gauss[1] - DN(0,1)*n_gauss[0]);
+const double crLeftHandSideMatrix2 = crLeftHandSideMatrix0*(DN(1,0)*n_gauss[1] - DN(1,1)*n_gauss[0]);
+rLeftHandSideMatrix(0,0)+=0;
+rLeftHandSideMatrix(0,1)+=0;
+rLeftHandSideMatrix(0,2)+=0;
+rLeftHandSideMatrix(0,3)+=0;
+rLeftHandSideMatrix(0,4)+=0;
+rLeftHandSideMatrix(0,5)+=0;
+rLeftHandSideMatrix(1,0)+=0;
+rLeftHandSideMatrix(1,1)+=0;
+rLeftHandSideMatrix(1,2)+=0;
+rLeftHandSideMatrix(1,3)+=0;
+rLeftHandSideMatrix(1,4)+=0;
+rLeftHandSideMatrix(1,5)+=0;
+rLeftHandSideMatrix(2,0)+=DN(0,1)*crLeftHandSideMatrix1;
+rLeftHandSideMatrix(2,1)+=-DN(0,0)*crLeftHandSideMatrix1;
+rLeftHandSideMatrix(2,2)+=0;
+rLeftHandSideMatrix(2,3)+=DN(1,1)*crLeftHandSideMatrix1;
+rLeftHandSideMatrix(2,4)+=-DN(1,0)*crLeftHandSideMatrix1;
+rLeftHandSideMatrix(2,5)+=0;
+rLeftHandSideMatrix(3,0)+=0;
+rLeftHandSideMatrix(3,1)+=0;
+rLeftHandSideMatrix(3,2)+=0;
+rLeftHandSideMatrix(3,3)+=0;
+rLeftHandSideMatrix(3,4)+=0;
+rLeftHandSideMatrix(3,5)+=0;
+rLeftHandSideMatrix(4,0)+=0;
+rLeftHandSideMatrix(4,1)+=0;
+rLeftHandSideMatrix(4,2)+=0;
+rLeftHandSideMatrix(4,3)+=0;
+rLeftHandSideMatrix(4,4)+=0;
+rLeftHandSideMatrix(4,5)+=0;
+rLeftHandSideMatrix(5,0)+=DN(0,1)*crLeftHandSideMatrix2;
+rLeftHandSideMatrix(5,1)+=-DN(0,0)*crLeftHandSideMatrix2;
+rLeftHandSideMatrix(5,2)+=0;
+rLeftHandSideMatrix(5,3)+=DN(1,1)*crLeftHandSideMatrix2;
+rLeftHandSideMatrix(5,4)+=-DN(1,0)*crLeftHandSideMatrix2;
+rLeftHandSideMatrix(5,5)+=0;
+

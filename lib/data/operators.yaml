@@ -191,7 +191,7 @@ operators:
     code_token: "div"
     description: "Divergence of Vector Field with respect to the reference coordinates defined in the system. Divergence of general tensor field is to be implemented with care about the transpose flag."
     arity: 1
-    latex: "\\nabla^{{sym}} \\cdot {a}"
+    latex: "\\nabla \\cdot {a}"
     needs_parentheses_when_exp: true
     pass_coords: true
     constraints:

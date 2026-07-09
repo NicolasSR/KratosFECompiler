@@ -346,7 +346,7 @@ void GeneralisedStokesWithVariableViscosity<2>::AddGaussPointLeftHandSideContrib
     // Assemble LHS contribution
     const double w_g = rData.Weight;
 
-    //substitute_lhs_2D3N
+    //substitute_element_lhs_2D3N
 }
 
 template <>
@@ -375,7 +375,7 @@ void GeneralisedStokesWithVariableViscosity<3>::AddGaussPointLeftHandSideContrib
     // Assemble LHS contribution
     const double w_g = rData.Weight;
 
-    //substitute_lhs_3D4N
+    //substitute_element_lhs_3D4N
 
 }
 
@@ -405,7 +405,7 @@ void GeneralisedStokesWithVariableViscosity<2>::AddGaussPointRightHandSideContri
     // Assemble LHS contribution
     const double w_g = rData.Weight;
 
-    //substitute_rhs_2D3N
+    //substitute_element_rhs_2D3N
 }
 
 template <>
@@ -434,7 +434,7 @@ void GeneralisedStokesWithVariableViscosity<3>::AddGaussPointRightHandSideContri
     // Assemble LHS contribution
     const double w_g = rData.Weight;
     
-    //substitute_rhs_3D4N
+    //substitute_element_rhs_3D4N
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////

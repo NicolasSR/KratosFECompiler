@@ -61,49 +61,62 @@ class SymbolicGenerator():
         self.case_output_dir.mkdir(exist_ok=True)
         if not self.overwrite and any([(self.case_output_dir/n).is_file() for n in output_file_names]):
             raise EnvironmentError(f"Case {case_name} already has results. To overwrite them use the --overwrite option")
-        
-    def _extract_unique_ndims_nnodes_pairs(self, file_path):
-        # Regex breakdown:
-        # //substitute_{object_name}_ -> matches the literal text, {object_name} will be rhs or lhs
-        # (\d+)              -> capture group 1: matches one or more digits for ndim
-        # D                 -> matches literal "D_"
-        # (\d+)              -> capture group 2: matches one or more digits for nnodes
-        # N                  -> matches literal "N"
+    
+    def _get_objects_from_kratos_templates(self, input_output_paths_list):
+        matched_objects_info = dict()
 
-        pattern = {
-            "rhs": r"//substitute_rhs_(\d+)D(\d+)N",
-            "lhs": r"//substitute_lhs_(\d+)D(\d+)N"
-        }
-        unique_pairs = {
-            "rhs": set(),
-            "lhs": set()
-        }
+        for paths_dict in input_output_paths_list:
 
-        def find_matches_for_object(line, object_name):
-            matches = re.findall(pattern[object_name], line)
-            for ndim, nnodes in matches:
-                # Convert the string matches to integers and add as a tuple
-                unique_pairs[object_name].add((int(ndim), int(nnodes)))
+            template_path = self.case_dir / paths_dict["template"]
 
-        try:
-            with open(file_path, "r", encoding="utf-8") as file:
-                for line in file:
-                    # Find all matches in the current line
-                    find_matches_for_object(line, "rhs")
-                    find_matches_for_object(line, "lhs")
-        except FileNotFoundError:
-            raise Exception(f"Error: The file '{file_path}' was not found.")
-        
+            # Regex breakdown:
+            # //substitute_       -> matches the literal text
+            # ([A-Za-z]+)         -> capture the object name (matches one or more letters)
+            # _{type}_            -> type will be rhs or lhs
+            # (\d+)              -> capture group 1: matches one or more digits for ndim
+            # D                 -> matches literal "D_"
+            # (\d+)              -> capture group 2: matches one or more digits for nnodes
+            # N                  -> matches literal "N"
+            pattern = {
+                "rhs": r"//substitute_([A-Za-z]+)_rhs_(\d+)D(\d+)N",
+                "lhs": r"//substitute_([A-Za-z]+)_lhs_(\d+)D(\d+)N"
+            }
+
+            def find_matches_in_line(line, rhs_or_lhs):
+                matches = re.findall(pattern[rhs_or_lhs], line)
+                for object_name, ndim, nnodes in matches:
+                    if not object_name in matched_objects_info.keys():
+                        # Initialize sets of dimensions and number of nodes for this case
+                        matched_objects_info[object_name] = dict()
+                        matched_objects_info[object_name]["rhs"] = set()
+                        matched_objects_info[object_name]["lhs"] = set()
+                    # Convert the string matches to integers and add as a tuple
+                    matched_objects_info[object_name][rhs_or_lhs].add((int(ndim), int(nnodes)))
+            
+            try:
+                with open(template_path, "r", encoding="utf-8") as file:
+                    for line in file:
+                        # Find all matches in the current line
+                        find_matches_in_line(line, "rhs")
+                        find_matches_in_line(line, "lhs")
+            except FileNotFoundError:
+                raise Exception(f"Error: The file '{template_path}' was not found.")
+            
         # Check that all the objects' pairs are the same, and that they are not empty
-        objects_list = list(unique_pairs.keys())
-        for object_name in objects_list[1:]:
-            if unique_pairs[object_name]!=unique_pairs[objects_list[0]]:
-                raise Exception(f"Error: The NDims and NNodes pairs for some objects among {str(objects_list)} differ")
-        if len(unique_pairs[objects_list[0]])==0:
-            raise Exception(f"Error: No substitution pattern found in template files")
+        for object_dict in matched_objects_info.values():
+            types_list = list(object_dict.keys())
+            for type in types_list[1:]:
+                if object_dict[type]!=object_dict[types_list[0]]:
+                    raise Exception(f"Error: The NDims and NNodes pairs for some objects among {str(types_list)} differ")
+            if len(object_dict[types_list[0]])==0:
+                raise Exception(f"Error: No substitution pattern found in template files")
+        
+        objects_info_compact = dict()
+        for object_name, object_dict in matched_objects_info.items():
+            types_list = list(object_dict.keys())
+            objects_info_compact[object_name] = list(object_dict[types_list[0]])
 
-        # Convert the set of tuples back to a list
-        return list(unique_pairs[objects_list[0]])
+        return objects_info_compact
 
     def call_symbolic_routine(self, routine_script_file_name, output_file_names):
         routine_script_file_path = self.case_dir / routine_script_file_name
@@ -130,26 +143,22 @@ class SymbolicGenerator():
         output_file_names = ["manual_RHS.cpp", "manual_LHS.cpp"]
         self.call_symbolic_routine(routine_script_file_name, output_file_names)
 
-    def _process_element_or_condition(self, obj_name, template_path, output_path, case_definition_file_name):
-        with open(template_path, "r") as template:
-            output_text = template.read()
-        ndims_nnodes_pairs = self._extract_unique_ndims_nnodes_pairs(template_path)
-        for (ndims, nnodes) in ndims_nnodes_pairs:
-            output_file_names = [
-                f"RHS_{obj_name}_{ndims}D{nnodes}N.cpp",
+    def _get_output_file_names(self, obj_name, ndims, nnodes):
+        out = [f"RHS_{obj_name}_{ndims}D{nnodes}N.cpp",
                 f"LHS_{obj_name}_{ndims}D{nnodes}N.cpp",
                 f"latex_prints_{obj_name}_{ndims}D{nnodes}N.cpp.md",
                 f"cpp_interface_{obj_name}_{ndims}D{nnodes}N.cpp.json"]
+        return out
+
+    def _process_element_or_condition(self, obj_name, ndims_nnodes_pairs, case_definition_file_name):
+        for (ndims, nnodes) in ndims_nnodes_pairs:
+            output_file_names = self._get_output_file_names(obj_name, ndims, nnodes)
             self._check_case_directories(case_definition_file_name, output_file_names)
             applied_config = {"dim": ndims, "nnodes": nnodes}
             compiler_outputs = KratosFECompiler(self.case_dir/case_definition_file_name).compile(applied_config, functional_name = f"functional_{obj_name}")
             for i in range(len(output_file_names)):
                 with open(self.case_output_dir/output_file_names[i], 'w') as f:
                     f.write(compiler_outputs[i])
-            output_text = PerformSubstitutionOnTemplate(output_text, f"//substitute_rhs_{ndims}D{nnodes}N", self.case_output_dir/output_file_names[0])
-            output_text = PerformSubstitutionOnTemplate(output_text, f"//substitute_lhs_{ndims}D{nnodes}N", self.case_output_dir/output_file_names[1])
-        with open(output_path, "w") as element_output_file:
-            element_output_file.write(output_text)
 
     def run_kratos(self):
         with open(self.case_dir/"case_config.json", 'r') as f:
@@ -157,15 +166,24 @@ class SymbolicGenerator():
         kratos_config = case_config["kratos_configuration"]
         case_definition_file_name = "fe_definition.json"
 
-        # Process Element
-        element_template_path = self.case_dir / kratos_config["element_template_path"]
-        element_output_path = self.case_dir / kratos_config["element_output_path"]
-        self._process_element_or_condition("element", element_template_path, element_output_path, case_definition_file_name)
+        objects_list = self._get_objects_from_kratos_templates(kratos_config["input_output_paths"])
+        for object_name, dim_pairs_list in objects_list.items():
+            self._process_element_or_condition(object_name, dim_pairs_list, case_definition_file_name)
 
-        # Process Condition
-        condition_template_path = self.case_dir / kratos_config["condition_template_path"]
-        condition_output_path = self.case_dir / kratos_config["condition_output_path"]
-        self._process_element_or_condition("condition", condition_template_path, condition_output_path, case_definition_file_name)
+        for paths_dict in kratos_config["input_output_paths"]:
+            template_path = self.case_dir / paths_dict["template"]
+            output_path = self.case_dir / paths_dict["output"]
+            with open(template_path, "r") as template:
+                output_text = template.read()
+            for object_name, dim_pairs_list in objects_list.items():
+                for dim_pairs in dim_pairs_list:
+                    ndims = dim_pairs[0]
+                    nnodes = dim_pairs[1]
+                    output_file_names = self._get_output_file_names(object_name,ndims,nnodes)
+                    output_text = PerformSubstitutionOnTemplate(output_text, f"//substitute_{object_name}_rhs_{ndims}D{nnodes}N", self.case_output_dir/output_file_names[0])
+                    output_text = PerformSubstitutionOnTemplate(output_text, f"//substitute_{object_name}_lhs_{ndims}D{nnodes}N", self.case_output_dir/output_file_names[1])
+            with open(output_path, "w") as element_output_file:
+                element_output_file.write(output_text)
         
     def run_all(self):
         self.get_case_config()
