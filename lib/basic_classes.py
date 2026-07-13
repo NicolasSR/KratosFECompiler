@@ -490,9 +490,8 @@ class BaseTensorPlaceholder(sp.Expr):
     def __new__(cls, *args):
         return super().__new__(cls, *args)
     
-    # We assign the properties of the placeholder as arguments of the sympy expression.
     @classmethod
-    def from_info_dict(cls, info_dict):
+    def parse_info_dict(cls, info_dict):
         name = sp.core.symbol.Str(info_dict['symbol']) # Prevent it from being converted to a symbol
         rank = sp.sympify(info_dict['tensor_rank']) # Should be a sp.Integer
         dim = sp.sympify(list(info_dict['dim']))
@@ -514,7 +513,13 @@ class BaseTensorPlaceholder(sp.Expr):
         if info_dict.get('positive', False):
             flags.append('positive')
         flags = sp.core.symbol.Str(",".join(flags))
-        return cls(name, rank, dim_str, dependencies, latex_str, flags)
+        return [name, rank, dim_str, dependencies, latex_str, flags]
+    
+    # We assign the properties of the placeholder as arguments of the sympy expression.
+    @classmethod
+    def from_info_dict(cls, info_dict):
+        args_list = cls.parse_info_dict(info_dict)
+        return cls(*args_list)
     
     # Then we create accessors for those properties.
     @property

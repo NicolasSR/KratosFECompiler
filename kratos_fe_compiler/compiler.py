@@ -47,9 +47,6 @@ class KratosFECompiler():
             self.namespace['z'] = sp.Symbol('z')
             base_scalars = VarsCombination.from_namespace(['x','y','z'],self.namespace)
 
-        # Define coordinates system (this will generate matrix for shape functions and their derivatives)
-        material_coords_system = CoordinateSystem(base_scalars, nnodes, impose_partion_of_unity, transpose_gradients_flag)
-
         ## Get quantities of the PDE
         unknown_vars = self.case_input['quantities']['unknown_vars']
         nodal_vars = self.case_input['quantities'].get('nodal_vars',[])
@@ -59,6 +56,17 @@ class KratosFECompiler():
         undefined_functions = self.case_input['quantities'].get('undefined_functions',[])
         defined_functions = self.case_input['quantities'].get('defined_functions',[])
 
+        # Extract list of all element space names beforehand, to pass them to the CoordinateSystem
+        element_space_names = set()
+        for var in unknown_vars:
+            element_space_names.add(var.get('element_space_name', ''))
+        for var in nodal_vars:
+            element_space_names.add(var.get('element_space_name', ''))
+        element_space_names = list(element_space_names)
+
+        # Define coordinates system (this will generate matrix for shape functions and their derivatives)
+        material_coords_system = CoordinateSystem(base_scalars, nnodes, impose_partion_of_unity, element_space_names, transpose_gradients_flag)
+
         # Assign new TensorPlaceholders to all variables
         placeholder_names_list = []
         for var in unknown_vars:
@@ -66,9 +74,11 @@ class KratosFECompiler():
             test_name = var['test_function_symbol']
             rank = int(var['tensor_rank'])
             trial_function_dict = {'symbol': name, 'latex':var.get('latex', name),
-                                    'tensor_rank': rank, 'dim':[dim]*rank, 'dependencies': base_scalars}
+                                    'tensor_rank': rank, 'dim':[dim]*rank, 'dependencies': base_scalars,
+                                    "element_space_name": var.get('element_space_name', '')}
             test_function_dict = {'symbol': test_name, 'latex':var.get('test_function_latex', test_name),
-                                    'tensor_rank': rank, 'dim':[dim]*rank, 'dependencies': base_scalars}
+                                    'tensor_rank': rank, 'dim':[dim]*rank, 'dependencies': base_scalars,
+                                    "element_space_name": var.get('element_space_name', '')}
             self.namespace[name] = UnknownTensorPlaceholder.from_info_dict(trial_function_dict)
             self.namespace[test_name] = UnknownTensorPlaceholder.from_info_dict(test_function_dict)
             placeholder_names_list.append(name)
@@ -88,7 +98,8 @@ class KratosFECompiler():
             rank = int(var['tensor_rank'])
             self.namespace[name] = NodalTensorPlaceholder.from_info_dict({'symbol': name, 'latex':var.get('latex', name),
                                     'tensor_rank': rank, 'dim':[dim]*rank, 'dependencies': base_scalars,
-                                    'positive': var.get('positive', False) })
+                                    'positive': var.get('positive', False),
+                                    "element_space_name": var.get('element_space_name', '') })
             placeholder_names_list.append(name)
 
         for var in symbolic_vars:

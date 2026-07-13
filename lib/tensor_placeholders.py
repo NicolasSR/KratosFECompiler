@@ -22,7 +22,17 @@ class NodalTensorPlaceholder(BaseTensorPlaceholder):
     def from_info_dict(cls, info_dict):
         if info_dict["tensor_rank"] >= 2:
             raise NotImplementedError("Only nodal functions of tensor rank 0 and 1 are supported.")
-        return super().from_info_dict(info_dict)
+        
+        args_list = super().parse_info_dict(info_dict)
+
+        element_space_name = sp.core.symbol.Str(info_dict['element_space_name'])
+        args_list.append(element_space_name)
+
+        return cls(*args_list)
+    
+    @property
+    def element_space_name(self):
+        return str(self.args[6])
     
     @property
     def deriv_array(self):
@@ -30,7 +40,7 @@ class NodalTensorPlaceholder(BaseTensorPlaceholder):
     
     @property
     def nodes(self):
-        N = ACTIVE_COORD_SYSTEM.get()["N"]
+        N = ACTIVE_COORD_SYSTEM.get()["element_spaces_dict"][self.element_space_name]["N"]
         nnodes = N.shape[0]
         nodes_name = self.name+self.nodes_name_complement
         if self.rank==0:
@@ -40,12 +50,12 @@ class NodalTensorPlaceholder(BaseTensorPlaceholder):
     
     @property
     def gauss(self):
-        N = ACTIVE_COORD_SYSTEM.get()["N"]
+        N = ACTIVE_COORD_SYSTEM.get()["element_spaces_dict"][self.element_space_name]["N"]
         return self.nodes.transpose()*N
     
     @property
     def deriv_gauss(self):
-        DN = ACTIVE_COORD_SYSTEM.get()["DN"]
+        DN = ACTIVE_COORD_SYSTEM.get()["element_spaces_dict"][self.element_space_name]["DN"]
         return DfjDxi(DN,self.nodes)
     
     def substitute_arrays_to_gauss(self,expr):

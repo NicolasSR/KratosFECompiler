@@ -5,12 +5,21 @@ from lib.kratos_utilities import DefineShapeFunctions
 ACTIVE_COORD_SYSTEM = contextvars.ContextVar("ACTIVE_COORD_SYSTEM", default=None)
 
 class CoordinateSystem():
-    def __init__(self, coord_symbols, nnodes, impose_partion_of_unity, transposed_gradients_flag=False):
-        N,DN = DefineShapeFunctions(nnodes, len(coord_symbols), impose_partion_of_unity)
+    def __init__(self, coord_symbols, nnodes, impose_partion_of_unity, element_space_names, transposed_gradients_flag=False):
+        
+        element_spaces_dict = dict()
+        for name in element_space_names:
+            if name == "":
+                N,DN = DefineShapeFunctions(nnodes, len(coord_symbols), impose_partion_of_unity)
+            else:
+                N,DN = DefineShapeFunctions(nnodes, len(coord_symbols), impose_partion_of_unity, shape_functions_name=f'N_{name}', first_derivatives_name=f'DN_{name}')
+            element_spaces_dict[name]=dict()
+            element_spaces_dict[name]["N"] = N
+            element_spaces_dict[name]["DN"] = DN
+        
         self.coord_system = {
             "coord_symbols": coord_symbols,
-            "N": N,
-            "DN": DN,
+            "element_spaces_dict": element_spaces_dict,
             "transposed_gradients_flag": transposed_gradients_flag
         }
         self.coord_token = None
