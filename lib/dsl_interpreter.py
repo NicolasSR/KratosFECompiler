@@ -38,6 +38,7 @@ class DSLInterpreter():
             "cross_prod_3d": po.vector_cross_prod_3d_op,
             "cross_prod_2d": po.vector_cross_prod_2d_op,
             "vec_outer_prod": po.vector_outer_prod_op,
+            "convective_op": po.convective_op
         }
         # If condition is treated as a special case in the interpreter, to prevent the interpretation of
         # the non-applying branch

@@ -577,3 +577,26 @@ operators:
           - op: "slice"
             args: ["b", 0, 1]
     implementation: "tensor_vec_outer_prod"
+
+  convective_op:
+    name: "Convective Operator"
+    code_token: "convective_op"
+    description: "Convective operator between two vectors ( (a \\cdot \\nabla)b )"
+    arity: 2
+    latex: "({a} \\cdot \\nabla) {b}"
+    needs_parentheses_when_exp: true
+    constraints:
+      rank:
+        op: "and"
+        args:
+          - op: "eq"
+            args: ["a", 1]
+          - op: "eq"
+            args: ["b", 1]
+      dim:
+        op: "eq"
+        args: ["a", "b"]
+    output:
+      rank: 1
+      dim: "a"
+    implementation: "convective_op"

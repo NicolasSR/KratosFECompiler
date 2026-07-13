@@ -178,6 +178,11 @@ def tensor_vec_outer_prod(a:sp.Array,b:sp.Array):
     assert a.rank()==1 and b.rank()==1
     return sp.tensorproduct(a,b)
 
+def convective_op(a:sp.Array,b:sp.Array):
+    assert a.rank()==1 and b.rank()==1
+    grad_b = tensor_grad_transposed(b) # Gradient matrix must be df_i/dx_j otherwise it is not mathematically correct
+    return tensor_mat_vector_prod(grad_b,a)
+
 def tensor_arrays_flatten_and_combine(input_arrays: Tuple):
     flat_inputs_list = []
     for array in input_arrays:

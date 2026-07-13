@@ -109,6 +109,11 @@ class vector_outer_prod_op(DeferredTensorOp):
     # which uses the YAML definition for 'vector_outer_prod_op'.
     pass
 
+class convective_op(DeferredTensorOp):
+    # It inherits all behavior from DeferredTensorOp 
+    # which uses the YAML definition for 'convective_op'.
+    pass
+
 # class flatten_and_combine_tensors(sp.Function):
 #     precedence = PRECEDENCE_TRADITIONAL['Dot'] # Probably wrong
 
