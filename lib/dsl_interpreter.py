@@ -46,7 +46,12 @@ class DSLInterpreter():
 
     def interpret_single_abs(self,abs):
         print("Interpreting single abs: ", abs)
-        if abs["op"] == "if":       # Special case for if condition
+        if isinstance(abs, str):
+            if abs in self.namespace.keys():
+                return self.namespace[abs]
+            else:
+                raise KeyError(f"Key {arg} not found in namespace or config settings")
+        elif abs["op"] == "if":       # Special case for if condition
             if len(abs["args"]) != 3:
                 raise ValueError("If statement requires 3 arguments")
             condition = self.interpret_single_abs(abs["args"][0])

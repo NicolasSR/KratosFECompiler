@@ -1,0 +1,135 @@
+{
+    "quantities": {
+        "unknown_vars": [
+            {
+                "symbol": "u",
+                "tensor_rank": "1",
+                "element_space_name": "p2",
+                "test_function_symbol": "v"
+            },
+            {
+                "symbol": "w",
+                "tensor_rank": "1",
+                "element_space_name": "p2",
+                "test_function_symbol": "phi"
+            },
+            {
+                "symbol": "p",
+                "tensor_rank": "0",
+                "element_space_name": "p1",
+                "test_function_symbol": "q"
+            },
+            {
+                "symbol": "T",
+                "tensor_rank": "0",
+                "element_space_name": "p2",
+                "test_function_symbol": "theta"
+            },
+            {
+                "symbol": "Phi",
+                "tensor_rank": "0",
+                "element_space_name": "p1",
+                "test_function_symbol": "zeta"
+            }
+        ],
+        "nodal_vars": [
+            {
+                "symbol": "F_u",
+                "tensor_rank": "1",
+                "element_space_name": "p2"
+            },
+            {
+                "symbol": "F_u_n",
+                "tensor_rank": "1",
+                "element_space_name": "p2"
+            },
+            {
+                "symbol": "F_u_nn",
+                "tensor_rank": "1",
+                "element_space_name": "p2"
+            }
+        ],
+        "undefined_functions": [],
+        "symbolic_vars": [],
+        "constant_vars": [
+            {
+                "symbol": "beta2",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "beta1",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "beta0",
+                "tensor_rank": "0"
+            }
+        ],
+        "numerical_vars": [],
+        "defined_functions": [
+            {
+                "symbol": "F_u_n_beta",
+                "tensor_rank": "1"
+            }
+        ]
+    },
+    "functional_ssa": [
+        {
+            "name": "F_u_n_beta",
+            "AST": {
+                "op": "add",
+                "args": [
+                    {
+                        "op": "add",
+                        "args": [
+                            {
+                                "op": "mult",
+                                "args": [
+                                    "beta2",
+                                    "F_u"
+                                ]
+                            },
+                            {
+                                "op": "mult",
+                                "args": [
+                                    "beta1",
+                                    "F_u_n"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "op": "mult",
+                        "args": [
+                            "beta0",
+                            "F_u_nn"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "name": "functional_forcing_rhs",
+            "AST": {
+                "op": "mult",
+                "args": [
+                    -1,
+                    {
+                        "op": "dot_prod",
+                        "args": [
+                            "F_u_n_beta",
+                            "v"
+                        ]
+                    }
+                ]
+            }
+        }
+    ],
+    "config_settings": {
+        "transpose_gradients_flag": true
+    },
+    "substitutions": {
+        "pre_lhs": [],
+        "post_lhs": []
+    }
+}

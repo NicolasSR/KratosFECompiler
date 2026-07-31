@@ -585,6 +585,7 @@ operators:
     arity: 2
     latex: "({a} \\cdot \\nabla) {b}"
     needs_parentheses_when_exp: true
+    pass_coords: true
     constraints:
       rank:
         op: "and"
@@ -594,8 +595,12 @@ operators:
           - op: "eq"
             args: ["b", 1]
       dim:
-        op: "eq"
-        args: ["a", "b"]
+        op: "and"
+        args:
+          - op: "eq"
+            args: ["a", "b"]
+          - op: "eq"
+            args: ["b", "coords"]
     output:
       rank: 1
       dim: "a"

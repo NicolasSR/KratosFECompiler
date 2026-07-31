@@ -24,7 +24,7 @@ class KratosFECompiler():
 
         ## Symbolic generation settings
         dim = options_dict["dim"]
-        nnodes = options_dict["nnodes"]
+        nnodes_dict = options_dict["nnodes_dict"]
 
         # Get the configuration settings from the case_config.json (priority) or from the fe_definition.json file (fallback)
         config_settings_dict = {}
@@ -57,15 +57,15 @@ class KratosFECompiler():
         defined_functions = self.case_input['quantities'].get('defined_functions',[])
 
         # Extract list of all element space names beforehand, to pass them to the CoordinateSystem
-        element_space_names = set()
-        for var in unknown_vars:
-            element_space_names.add(var.get('element_space_name', ''))
-        for var in nodal_vars:
-            element_space_names.add(var.get('element_space_name', ''))
-        element_space_names = list(element_space_names)
+        # element_space_names = set()
+        # for var in unknown_vars:
+        #     element_space_names.add(var.get('element_space_name', ''))
+        # for var in nodal_vars:
+        #     element_space_names.add(var.get('element_space_name', ''))
+        # element_space_names = list(element_space_names)
 
         # Define coordinates system (this will generate matrix for shape functions and their derivatives)
-        material_coords_system = CoordinateSystem(base_scalars, nnodes, impose_partion_of_unity, element_space_names, transpose_gradients_flag)
+        material_coords_system = CoordinateSystem(base_scalars, nnodes_dict, impose_partion_of_unity, transpose_gradients_flag)
 
         # Assign new TensorPlaceholders to all variables
         placeholder_names_list = []
@@ -255,7 +255,7 @@ class KratosFECompiler():
     
             full_output_string = f"Functional in continuous, compact form:\n$${latex_out_cont_compact}$$\n\nFunctional in continuous, compact form after substituting predefined functions:\n$${latex_out_cont_compact_2}$$\n\nFunctional in continuous, expanded form:\n$${latex_out_cont_expanded}$$\n\nFunctional in discretized from:\n$${latex_out_gauss}$$"
 
-            cpp_interface_json = generate_interface_json(dim, nnodes, placeholder_names_list, self.namespace, sp.shape(dofs_as_matrix)[0])
+            cpp_interface_json = generate_interface_json(dim, nnodes_dict, placeholder_names_list, self.namespace, sp.shape(dofs_as_matrix)[0])
 
             return rhs_out, lhs_out, full_output_string, cpp_interface_json
 

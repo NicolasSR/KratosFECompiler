@@ -1,6 +1,7 @@
 from functools import reduce
 import operator
 import importlib
+from collections import OrderedDict
 
 import sympy as sp
 from sympy import NDimArray
@@ -858,7 +859,7 @@ class CoefficientsIndicator(VarsCombination):
 
     def __new__(cls, *components):
         for comp in components:
-            if isinstance(comp, BaseTensorPlaceholder) and not comp.__class__.__name__ in ['NodalTensorPlaceholder','UnknownTensorPlaceholder']:
+            if not isinstance(comp, BaseTensorPlaceholder) or not comp.__class__.__name__ in ['NodalTensorPlaceholder','UnknownTensorPlaceholder']:
                 raise TypeError(f"Cannot include {comp} in a VarsCombination, as  it is not a NodalTensorPlaceholder or UnknownTensorPlaceholder")
         return sp.Expr.__new__(cls, *components)
     
@@ -870,11 +871,21 @@ class CoefficientsIndicator(VarsCombination):
     @property
     def gauss(self):
         # Returns the list of nodal values for all components.
-        # The order is [var_1_comp_1_node_1, var_1_comp_2_node_1, var_2_node_1, var_1_comp_1_node_2, var_1_comp_2_node_2, var_2_node_2, ...]
-        combined_dofs_mat = self.args[0].nodes
-        for var in self.args[1:]:
-            combined_dofs_mat = combined_dofs_mat.row_join(var.nodes)
-        return get_flat_list_of_components(combined_dofs_mat)
+        # The order (for only one element space) is [var_1_comp_1_node_1, var_1_comp_2_node_1, var_2_node_1, var_1_comp_1_node_2, var_1_comp_2_node_2, var_2_node_2, ...]
+        # If there are multiple element spaces, one list per element space is returned (following the above order inside), and then all the lists are
+        # appended one after the other.
+
+        combined_dofs_mat_dict = OrderedDict()
+        for var in self.args:
+            space_name = var.element_space_name
+            if var.element_space_name not in combined_dofs_mat_dict.keys():
+                combined_dofs_mat_dict[space_name] = var.nodes
+            else:
+                combined_dofs_mat_dict[space_name] = combined_dofs_mat_dict[space_name].row_join(var.nodes)
+        final_flat_list_of_components = []
+        for current_components_list in combined_dofs_mat_dict.values():
+            final_flat_list_of_components.extend(get_flat_list_of_components(current_components_list))
+        return final_flat_list_of_components
     
     def evaluate(self):
         # Unlike VarsCombination and CoordsIndicator, this one can be used as a standalone input to a DerivIndicator's denominator.

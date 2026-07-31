@@ -4,22 +4,26 @@
             {
                 "symbol": "u",
                 "tensor_rank": "1",
+                "element_space_name": "def",
                 "test_function_symbol": "v"
             },
             {
                 "symbol": "p",
                 "tensor_rank": "0",
+                "element_space_name": "def",
                 "test_function_symbol": "q"
             }
         ],
         "nodal_vars": [
             {
                 "symbol": "nu",
-                "tensor_rank": "0"
+                "tensor_rank": "0",
+                "element_space_name": "def"
             },
             {
                 "symbol": "f",
-                "tensor_rank": "1"
+                "tensor_rank": "1",
+                "element_space_name": "def"
             }
         ],
         "undefined_functions": [],

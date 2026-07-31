@@ -1,0 +1,1009 @@
+{
+    "quantities": {
+        "unknown_vars": [
+            {
+                "symbol": "u",
+                "tensor_rank": "1",
+                "element_space_name": "p2",
+                "test_function_symbol": "v"
+            },
+            {
+                "symbol": "w",
+                "tensor_rank": "1",
+                "element_space_name": "p2",
+                "test_function_symbol": "phi"
+            },
+            {
+                "symbol": "p",
+                "tensor_rank": "0",
+                "element_space_name": "p1",
+                "test_function_symbol": "q"
+            },
+            {
+                "symbol": "T",
+                "tensor_rank": "0",
+                "element_space_name": "p2",
+                "test_function_symbol": "theta"
+            },
+            {
+                "symbol": "Phi",
+                "tensor_rank": "0",
+                "element_space_name": "p1",
+                "test_function_symbol": "zeta"
+            }
+        ],
+        "nodal_vars": [
+            {
+                "symbol": "u_n",
+                "tensor_rank": "1",
+                "element_space_name": "p2"
+            },
+            {
+                "symbol": "u_nn",
+                "tensor_rank": "1",
+                "element_space_name": "p2"
+            },
+            {
+                "symbol": "w_n",
+                "tensor_rank": "1",
+                "element_space_name": "p2"
+            },
+            {
+                "symbol": "w_nn",
+                "tensor_rank": "1",
+                "element_space_name": "p2"
+            },
+            {
+                "symbol": "p_n",
+                "tensor_rank": "0",
+                "element_space_name": "p1"
+            },
+            {
+                "symbol": "p_nn",
+                "tensor_rank": "0",
+                "element_space_name": "p1"
+            },
+            {
+                "symbol": "T_n",
+                "tensor_rank": "0",
+                "element_space_name": "p2"
+            },
+            {
+                "symbol": "T_nn",
+                "tensor_rank": "0",
+                "element_space_name": "p2"
+            },
+            {
+                "symbol": "f",
+                "tensor_rank": "0",
+                "element_space_name": "p2"
+            },
+            {
+                "symbol": "f_n",
+                "tensor_rank": "0",
+                "element_space_name": "p2"
+            },
+            {
+                "symbol": "f_nn",
+                "tensor_rank": "0",
+                "element_space_name": "p2"
+            }
+        ],
+        "undefined_functions": [],
+        "symbolic_vars": [],
+        "constant_vars": [
+            {
+                "symbol": "alpha2",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "alpha1",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "alpha0",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "beta2",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "beta1",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "beta0",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "k_hat_n",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "mu",
+                "tensor_rank": "0",
+                "positive": true
+            },
+            {
+                "symbol": "gamma",
+                "tensor_rank": "0",
+                "positive": true
+            },
+            {
+                "symbol": "nu",
+                "tensor_rank": "0",
+                "positive": true
+            },
+            {
+                "symbol": "rho",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "lambda",
+                "tensor_rank": "0",
+                "positive": true
+            },
+            {
+                "symbol": "sigma",
+                "tensor_rank": "0",
+                "positive": true
+            },
+            {
+                "symbol": "xi",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "kappa",
+                "tensor_rank": "0"
+            }
+        ],
+        "numerical_vars": [],
+        "defined_functions": [
+            {
+                "symbol": "u_n_alpha",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "u_n_beta",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "w_n_beta",
+                "tensor_rank": "1"
+            },
+            {
+                "symbol": "p_n_beta",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "T_n_alpha",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "T_n_beta",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "f_n_beta",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "b_operator_evaluated",
+                "tensor_rank": "0"
+            },
+            {
+                "symbol": "b_star_operator_evaluated",
+                "tensor_rank": "0"
+            }
+        ]
+    },
+    "functional_ssa": [
+        {
+            "name": "u_n_alpha",
+            "AST": {
+                "op": "add",
+                "args": [
+                    {
+                        "op": "add",
+                        "args": [
+                            {
+                                "op": "mult",
+                                "args": [
+                                    "alpha2",
+                                    "u"
+                                ]
+                            },
+                            {
+                                "op": "mult",
+                                "args": [
+                                    "alpha1",
+                                    "u_n"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "op": "mult",
+                        "args": [
+                            "alpha0",
+                            "u_nn"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "name": "u_n_beta",
+            "AST": {
+                "op": "add",
+                "args": [
+                    {
+                        "op": "add",
+                        "args": [
+                            {
+                                "op": "mult",
+                                "args": [
+                                    "beta2",
+                                    "u"
+                                ]
+                            },
+                            {
+                                "op": "mult",
+                                "args": [
+                                    "beta1",
+                                    "u_n"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "op": "mult",
+                        "args": [
+                            "beta0",
+                            "u_nn"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "name": "w_n_beta",
+            "AST": {
+                "op": "add",
+                "args": [
+                    {
+                        "op": "add",
+                        "args": [
+                            {
+                                "op": "mult",
+                                "args": [
+                                    "beta2",
+                                    "w"
+                                ]
+                            },
+                            {
+                                "op": "mult",
+                                "args": [
+                                    "beta1",
+                                    "w_n"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "op": "mult",
+                        "args": [
+                            "beta0",
+                            "w_nn"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "name": "p_n_beta",
+            "AST": {
+                "op": "add",
+                "args": [
+                    {
+                        "op": "add",
+                        "args": [
+                            {
+                                "op": "mult",
+                                "args": [
+                                    "beta2",
+                                    "p"
+                                ]
+                            },
+                            {
+                                "op": "mult",
+                                "args": [
+                                    "beta1",
+                                    "p_n"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "op": "mult",
+                        "args": [
+                            "beta0",
+                            "p_nn"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "name": "T_n_alpha",
+            "AST": {
+                "op": "add",
+                "args": [
+                    {
+                        "op": "add",
+                        "args": [
+                            {
+                                "op": "mult",
+                                "args": [
+                                    "alpha2",
+                                    "T"
+                                ]
+                            },
+                            {
+                                "op": "mult",
+                                "args": [
+                                    "alpha1",
+                                    "T_n"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "op": "mult",
+                        "args": [
+                            "alpha0",
+                            "T_nn"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "name": "T_n_beta",
+            "AST": {
+                "op": "add",
+                "args": [
+                    {
+                        "op": "add",
+                        "args": [
+                            {
+                                "op": "mult",
+                                "args": [
+                                    "beta2",
+                                    "T"
+                                ]
+                            },
+                            {
+                                "op": "mult",
+                                "args": [
+                                    "beta1",
+                                    "T_n"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "op": "mult",
+                        "args": [
+                            "beta0",
+                            "T_nn"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "name": "f_n_beta",
+            "AST": {
+                "op": "add",
+                "args": [
+                    {
+                        "op": "add",
+                        "args": [
+                            {
+                                "op": "mult",
+                                "args": [
+                                    "beta2",
+                                    "f"
+                                ]
+                            },
+                            {
+                                "op": "mult",
+                                "args": [
+                                    "beta1",
+                                    "f_n"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "op": "mult",
+                        "args": [
+                            "beta0",
+                            "f_nn"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "name": "b_op_t1",
+            "AST": {
+                "op": "mult",
+                "args": [
+                    {
+                        "op": "divide",
+                        "args": [
+                            1,
+                            2
+                        ]
+                    },
+                    {
+                        "op": "dot_prod",
+                        "args": [
+                            {
+                                "op": "convective_op",
+                                "args": [
+                                    "u_n_beta",
+                                    "u_n_beta"
+                                ]
+                            },
+                            "v"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "name": "b_op_t2",
+            "AST": {
+                "op": "mult",
+                "args": [
+                    {
+                        "op": "divide",
+                        "args": [
+                            1,
+                            2
+                        ]
+                    },
+                    {
+                        "op": "dot_prod",
+                        "args": [
+                            {
+                                "op": "convective_op",
+                                "args": [
+                                    "u_n_beta",
+                                    "v"
+                                ]
+                            },
+                            "u_n_beta"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "name": "b_operator_evaluated",
+            "AST": {
+                "op": "subtract",
+                "args": [
+                    "b_op_t1",
+                    "b_op_t2"
+                ]
+            }
+        },
+        {
+            "name": "b_star_op_t1",
+            "AST": {
+                "op": "mult",
+                "args": [
+                    {
+                        "op": "mult",
+                        "args": [
+                            {
+                                "op": "divide",
+                                "args": [
+                                    1,
+                                    2
+                                ]
+                            },
+                            {
+                                "op": "dot_prod",
+                                "args": [
+                                    "u_n_beta",
+                                    {
+                                        "op": "grad",
+                                        "args": [
+                                            "T_n_beta"
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    "theta"
+                ]
+            }
+        },
+        {
+            "name": "b_star_op_t2",
+            "AST": {
+                "op": "mult",
+                "args": [
+                    {
+                        "op": "mult",
+                        "args": [
+                            {
+                                "op": "divide",
+                                "args": [
+                                    1,
+                                    2
+                                ]
+                            },
+                            {
+                                "op": "dot_prod",
+                                "args": [
+                                    "u_n_beta",
+                                    {
+                                        "op": "grad",
+                                        "args": [
+                                            "theta"
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    },
+                    "T_n_beta"
+                ]
+            }
+        },
+        {
+            "name": "b_star_operator_evaluated",
+            "AST": {
+                "op": "subtract",
+                "args": [
+                    "b_star_op_t1",
+                    "b_star_op_t2"
+                ]
+            }
+        },
+        {
+            "name": "eq1_t1",
+            "AST": {
+                "op": "mult",
+                "args": [
+                    {
+                        "op": "divide",
+                        "args": [
+                            1,
+                            "k_hat_n"
+                        ]
+                    },
+                    {
+                        "op": "dot_prod",
+                        "args": [
+                            "u_n_alpha",
+                            "v"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "name": "eq1_t2",
+            "AST": {
+                "op": "mult",
+                "args": [
+                    "mu",
+                    {
+                        "op": "double_contract",
+                        "args": [
+                            {
+                                "op": "grad",
+                                "args": [
+                                    "u_n_beta"
+                                ]
+                            },
+                            {
+                                "op": "grad",
+                                "args": [
+                                    "v"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "name": "eq1_t3",
+            "AST": {
+                "op": "mult",
+                "args": [
+                    "gamma",
+                    {
+                        "op": "double_contract",
+                        "args": [
+                            {
+                                "op": "grad",
+                                "args": [
+                                    "w_n_beta"
+                                ]
+                            },
+                            {
+                                "op": "grad",
+                                "args": [
+                                    "v"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "name": "eq1_t4",
+            "AST": {
+                "op": "mult",
+                "args": [
+                    "nu",
+                    "b_operator_evaluated"
+                ]
+            }
+        },
+        {
+            "name": "eq1_t5",
+            "AST": {
+                "op": "mult",
+                "args": [
+                    "rho",
+                    {
+                        "op": "dot_prod",
+                        "args": [
+                            "u_n_beta",
+                            "v"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "name": "eq1_t6",
+            "AST": {
+                "op": "mult",
+                "args": [
+                    "lambda",
+                    {
+                        "op": "dot_prod",
+                        "args": [
+                            {
+                                "op": "mult",
+                                "args": [
+                                    {
+                                        "op": "pow",
+                                        "args": [
+                                            {
+                                                "op": "norm",
+                                                "args": [
+                                                    "u_n_beta"
+                                                ]
+                                            },
+                                            2
+                                        ]
+                                    },
+                                    "u_n_beta"
+                                ]
+                            },
+                            "v"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "name": "eq1_t7",
+            "AST": {
+                "op": "mult",
+                "args": [
+                    "p_n_beta",
+                    {
+                        "op": "div",
+                        "args": [
+                            "v"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "name": "eq1_t8",
+            "AST": {
+                "op": "dot_prod",
+                "args": [
+                    {
+                        "op": "mult",
+                        "args": [
+                            {
+                                "op": "mult",
+                                "args": [
+                                    "sigma",
+                                    "xi"
+                                ]
+                            },
+                            "T_n_beta"
+                        ]
+                    },
+                    "v"
+                ]
+            }
+        },
+        {
+            "name": "eq1",
+            "AST": {
+                "op": "subtract",
+                "args": [
+                    {
+                        "op": "subtract",
+                        "args": [
+                            {
+                                "op": "add",
+                                "args": [
+                                    {
+                                        "op": "add",
+                                        "args": [
+                                            {
+                                                "op": "add",
+                                                "args": [
+                                                    {
+                                                        "op": "add",
+                                                        "args": [
+                                                            {
+                                                                "op": "add",
+                                                                "args": [
+                                                                    "eq1_t1",
+                                                                    "eq1_t2"
+                                                                ]
+                                                            },
+                                                            "eq1_t3"
+                                                        ]
+                                                    },
+                                                    "eq1_t4"
+                                                ]
+                                            },
+                                            "eq1_t5"
+                                        ]
+                                    },
+                                    "eq1_t6"
+                                ]
+                            },
+                            "eq1_t7"
+                        ]
+                    },
+                    "eq1_t8"
+                ]
+            }
+        },
+        {
+            "name": "eq2_t1",
+            "AST": {
+                "op": "dot_prod",
+                "args": [
+                    "w",
+                    "phi"
+                ]
+            }
+        },
+        {
+            "name": "eq2_t2",
+            "AST": {
+                "op": "mult",
+                "args": [
+                    "Phi",
+                    {
+                        "op": "div",
+                        "args": [
+                            "phi"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "name": "eq2_t3",
+            "AST": {
+                "op": "double_contract",
+                "args": [
+                    {
+                        "op": "grad",
+                        "args": [
+                            "u"
+                        ]
+                    },
+                    {
+                        "op": "grad",
+                        "args": [
+                            "phi"
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "name": "eq2",
+            "AST": {
+                "op": "subtract",
+                "args": [
+                    {
+                        "op": "subtract",
+                        "args": [
+                            "eq2_t1",
+                            "eq2_t2"
+                        ]
+                    },
+                    "eq2_t3"
+                ]
+            }
+        },
+        {
+            "name": "eq3",
+            "AST": {
+                "op": "mult",
+                "args": [
+                    {
+                        "op": "div",
+                        "args": [
+                            "u"
+                        ]
+                    },
+                    "q"
+                ]
+            }
+        },
+        {
+            "name": "eq4",
+            "AST": {
+                "op": "mult",
+                "args": [
+                    {
+                        "op": "div",
+                        "args": [
+                            "w"
+                        ]
+                    },
+                    "zeta"
+                ]
+            }
+        },
+        {
+            "name": "eq5_t1",
+            "AST": {
+                "op": "mult",
+                "args": [
+                    {
+                        "op": "mult",
+                        "args": [
+                            {
+                                "op": "divide",
+                                "args": [
+                                    1,
+                                    "k_hat_n"
+                                ]
+                            },
+                            "T_n_alpha"
+                        ]
+                    },
+                    "theta"
+                ]
+            }
+        },
+        {
+            "name": "eq5_t2",
+            "AST": {
+                "op": "mult",
+                "args": [
+                    "kappa",
+                    {
+                        "op": "dot_prod",
+                        "args": [
+                            {
+                                "op": "grad",
+                                "args": [
+                                    "T_n_beta"
+                                ]
+                            },
+                            {
+                                "op": "grad",
+                                "args": [
+                                    "theta"
+                                ]
+                            }
+                        ]
+                    }
+                ]
+            }
+        },
+        {
+            "name": "eq5_t3",
+            "AST": "b_star_operator_evaluated"
+        },
+        {
+            "name": "eq5_t4",
+            "AST": {
+                "op": "mult",
+                "args": [
+                    "f_n_beta",
+                    "theta"
+                ]
+            }
+        },
+        {
+            "name": "eq5",
+            "AST": {
+                "op": "subtract",
+                "args": [
+                    {
+                        "op": "add",
+                        "args": [
+                            {
+                                "op": "add",
+                                "args": [
+                                    "eq5_t1",
+                                    "eq5_t2"
+                                ]
+                            },
+                            "eq5_t3"
+                        ]
+                    },
+                    "eq5_t4"
+                ]
+            }
+        },
+        {
+            "name": "functional_element_rhs",
+            "AST": {
+                "op": "add",
+                "args": [
+                    {
+                        "op": "add",
+                        "args": [
+                            {
+                                "op": "add",
+                                "args": [
+                                    {
+                                        "op": "add",
+                                        "args": [
+                                            "eq1",
+                                            "eq2"
+                                        ]
+                                    },
+                                    "eq3"
+                                ]
+                            },
+                            "eq4"
+                        ]
+                    },
+                    "eq5"
+                ]
+            }
+        }
+    ],
+    "config_settings": {
+        "transpose_gradients_flag": true
+    },
+    "substitutions": {
+        "pre_lhs": [],
+        "post_lhs": []
+    }
+}

@@ -1,0 +1,14 @@
+{
+    "kratos_configuration": {
+        "input_output_paths": [
+            {
+                "template": "element_template.cpp",
+                "output": "element.cpp"
+            },
+            {
+                "template": "condition_template.cpp",
+                "output": "condition.cpp"
+            }
+        ]
+    }
+}

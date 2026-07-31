@@ -2,6 +2,7 @@ import importlib
 from pathlib import Path
 import json
 import re
+from collections import OrderedDict
 
 from docopt import docopt
 
@@ -71,27 +72,35 @@ class SymbolicGenerator():
 
             # Regex breakdown:
             # //substitute_       -> matches the literal text
-            # ([A-Za-z]+)         -> capture the object name (matches one or more letters)
+            # ([A-Za-z0-9]+)         -> capture the object name (matches one or more letters and numbers)
             # _{type}_            -> type will be rhs or lhs
             # (\d+)              -> capture group 1: matches one or more digits for ndim
             # D                 -> matches literal "D_"
             # (\d+)              -> capture group 2: matches one or more digits for nnodes
-            # N                  -> matches literal "N"
+            # ((?:_(?:[A-Za-z0-9]+?)-(?:\d+)N)+) -> matches structures like "_p1-4N_p2-8N" from which we will extract the element spaces and their nnodes
             pattern = {
-                "rhs": r"//substitute_([A-Za-z]+)_rhs_(\d+)D(\d+)N",
-                "lhs": r"//substitute_([A-Za-z]+)_lhs_(\d+)D(\d+)N"
+                "rhs": r"//substitute_([A-Za-z0-9]+)_rhs_(\d+)D((?:_(?:[A-Za-z0-9]+?)-(?:\d+)N)+)",
+                "lhs": r"//substitute_([A-Za-z0-9]+)_lhs_(\d+)D((?:_(?:[A-Za-z0-9]+?)-(?:\d+)N)+)",
+                "elem_space": r"_([A-Za-z0-9]+?)-(\d+)N"
             }
 
             def find_matches_in_line(line, rhs_or_lhs):
                 matches = re.findall(pattern[rhs_or_lhs], line)
-                for object_name, ndim, nnodes in matches:
+                for object_name, ndim, elem_spaces_info_string in matches:
+                    nnodes_dict = OrderedDict()
+                    elem_space_matches = re.findall(pattern["elem_space"], elem_spaces_info_string)
+                    for elem_space_name, nnodes in elem_space_matches:
+                        nnodes_dict[elem_space_name] = int(nnodes)
+                    
                     if not object_name in matched_objects_info.keys():
                         # Initialize sets of dimensions and number of nodes for this case
                         matched_objects_info[object_name] = dict()
                         matched_objects_info[object_name]["rhs"] = set()
                         matched_objects_info[object_name]["lhs"] = set()
                     # Convert the string matches to integers and add as a tuple
-                    matched_objects_info[object_name][rhs_or_lhs].add((int(ndim), int(nnodes)))
+
+                    nnodes_dict_tuple = tuple(nnodes_dict.items())
+                    matched_objects_info[object_name][rhs_or_lhs].add((int(ndim), nnodes_dict_tuple))
             
             try:
                 with open(template_path, "r", encoding="utf-8") as file:
@@ -114,8 +123,12 @@ class SymbolicGenerator():
         objects_info_compact = dict()
         for object_name, object_dict in matched_objects_info.items():
             types_list = list(object_dict.keys())
-            objects_info_compact[object_name] = list(object_dict[types_list[0]])
-
+            objects_info_compact[object_name] = []
+            for combinations in object_dict[types_list[0]]:
+                combination_dict = dict()
+                combination_dict["dims"] = combinations[0]
+                combination_dict["nnodes_dict"] = OrderedDict(combinations[1])
+                objects_info_compact[object_name].append(combination_dict)
         return objects_info_compact
 
     def call_symbolic_routine(self, routine_script_file_name, output_file_names):
@@ -143,18 +156,23 @@ class SymbolicGenerator():
         output_file_names = ["manual_RHS.cpp", "manual_LHS.cpp"]
         self.call_symbolic_routine(routine_script_file_name, output_file_names)
 
-    def _get_output_file_names(self, obj_name, ndims, nnodes):
-        out = [f"RHS_{obj_name}_{ndims}D{nnodes}N.cpp",
-                f"LHS_{obj_name}_{ndims}D{nnodes}N.cpp",
-                f"latex_prints_{obj_name}_{ndims}D{nnodes}N.cpp.md",
-                f"cpp_interface_{obj_name}_{ndims}D{nnodes}N.cpp.json"]
+    def _get_output_file_names(self, obj_name, ndims, nnodes_dict):
+        elem_spaces_section = "_".join([f"{k}-{v}N" for k,v in nnodes_dict.items()])
+        out = [f"RHS_{obj_name}_{ndims}D_{elem_spaces_section}.cpp",
+                f"LHS_{obj_name}_{ndims}D_{elem_spaces_section}.cpp",
+                f"latex_prints_{obj_name}_{ndims}D_{elem_spaces_section}.md",
+                f"cpp_interface_{obj_name}_{ndims}D_{elem_spaces_section}.json"]
         return out
 
-    def _process_element_or_condition(self, obj_name, ndims_nnodes_pairs, case_definition_file_name):
-        for (ndims, nnodes) in ndims_nnodes_pairs:
-            output_file_names = self._get_output_file_names(obj_name, ndims, nnodes)
+    def _process_element_or_condition(self, obj_name, dim_combinations_list, case_definition_file_name):
+        print("Processing object:", obj_name, "with element spaces list:")
+        print(dim_combinations_list)
+        for dim_combinations_dict in dim_combinations_list:
+            ndims = dim_combinations_dict["dims"]
+            nnodes_dict = dim_combinations_dict["nnodes_dict"]
+            output_file_names = self._get_output_file_names(obj_name, ndims, nnodes_dict)
             self._check_case_directories(case_definition_file_name, output_file_names)
-            applied_config = {"dim": ndims, "nnodes": nnodes}
+            applied_config = {"dim": ndims, "nnodes_dict": nnodes_dict}
             compiler_outputs = KratosFECompiler(self.case_dir/case_definition_file_name).compile(applied_config, functional_name = f"functional_{obj_name}")
             for i in range(len(output_file_names)):
                 with open(self.case_output_dir/output_file_names[i], 'w') as f:
@@ -167,21 +185,26 @@ class SymbolicGenerator():
         case_definition_file_name = "fe_definition.json"
 
         objects_list = self._get_objects_from_kratos_templates(kratos_config["input_output_paths"])
-        for object_name, dim_pairs_list in objects_list.items():
-            self._process_element_or_condition(object_name, dim_pairs_list, case_definition_file_name)
+
+        print("Objects to be processed:")
+        print(objects_list)
+
+        for object_name, dim_combinations_list in objects_list.items():
+            self._process_element_or_condition(object_name, dim_combinations_list, case_definition_file_name)
 
         for paths_dict in kratos_config["input_output_paths"]:
             template_path = self.case_dir / paths_dict["template"]
             output_path = self.case_dir / paths_dict["output"]
             with open(template_path, "r") as template:
                 output_text = template.read()
-            for object_name, dim_pairs_list in objects_list.items():
-                for dim_pairs in dim_pairs_list:
-                    ndims = dim_pairs[0]
-                    nnodes = dim_pairs[1]
-                    output_file_names = self._get_output_file_names(object_name,ndims,nnodes)
-                    output_text = PerformSubstitutionOnTemplate(output_text, f"//substitute_{object_name}_rhs_{ndims}D{nnodes}N", self.case_output_dir/output_file_names[0])
-                    output_text = PerformSubstitutionOnTemplate(output_text, f"//substitute_{object_name}_lhs_{ndims}D{nnodes}N", self.case_output_dir/output_file_names[1])
+            for object_name, dim_combinations_list in objects_list.items():
+                for dim_combinations_dict in dim_combinations_list:
+                    ndims = dim_combinations_dict["dims"]
+                    nnodes_dict = dim_combinations_dict["nnodes_dict"]
+                    output_file_names = self._get_output_file_names(object_name,ndims,nnodes_dict)
+                    elem_spaces_section = "_".join([f"{k}-{v}N" for k,v in nnodes_dict.items()])
+                    output_text = PerformSubstitutionOnTemplate(output_text, f"//substitute_{object_name}_rhs_{ndims}D_{elem_spaces_section}", self.case_output_dir/output_file_names[0])
+                    output_text = PerformSubstitutionOnTemplate(output_text, f"//substitute_{object_name}_lhs_{ndims}D_{elem_spaces_section}", self.case_output_dir/output_file_names[1])
             with open(output_path, "w") as element_output_file:
                 element_output_file.write(output_text)
         

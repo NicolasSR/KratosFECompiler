@@ -38,7 +38,7 @@ class NumericCPPComparingEngine():
             cpp_interface_info = json.load(f)
 
         self.dim = cpp_interface_info["dim"]
-        self.nnodes = cpp_interface_info["nnodes"]
+        self.nnodes_dict = cpp_interface_info["nnodes_dict"]
         self.num_dofs = cpp_interface_info["dofs"]
         self.vars_dict = cpp_interface_info["vars"]
 
@@ -53,9 +53,9 @@ class NumericCPPComparingEngine():
         sym_unique_size = self.dim*(self.dim+1)/2
         self.shape_map = {
             'scalars': [1],
-            'nodal_scalars': [self.nnodes],
+            'nodal_scalars': {name: [self.nnodes_dict[name]] for name in self.nnodes_dict.keys()},
             'vectors': [self.dim],
-            'nodal_vectors': [self.nnodes, self.dim],
+            'nodal_vectors': {name: [self.nnodes_dict[name], self.dim] for name in self.nnodes_dict.keys()},
             'sym_matrices': [sym_unique_size],
             'matrices': [self.dim,self.dim],
             'rank_4_voigt': [sym_unique_size,sym_unique_size]
@@ -136,21 +136,38 @@ class NumericCPPComparingEngine():
     shape_post_processing_map = {
             'scalars': make_scalar,
             'nodal_vectors': flatten,
-            'rank_4_voigt': make_symmetric_and_flatten
+            'rank_4_voigt': make_symmetric_and_flatten,
         }
 
+    def add_variables_values(self, var_type, vars_list, var_shape, values_dict):
+        for var in vars_list:
+            values = self.rng.random([int(s) for s in var_shape])
+            if var_type in self.shape_post_processing_map.keys():
+                values = self.shape_post_processing_map[var_type](values)
+            values_dict[var] = values
+            
     def generate_values_set(self):
         values_dict = {
             "w_g": self.rng.random(),
-            "N": self.rng.random((self.nnodes)),
-            "DN": self.rng.random((self.nnodes, self.dim)).flatten()
         }
-        for var_type, vars_list in self.vars_dict.items():
-            for var in vars_list:
-                values = self.rng.random([int(s) for s in self.shape_map[var_type]])
-                if var_type in self.shape_post_processing_map.keys():
-                    values = self.shape_post_processing_map[var_type](values)
-                values_dict[var] = values
+        if len(self.nnodes_dict.keys()) == 1:
+            name = list(self.nnodes_dict.keys())[0]
+            values_dict["N"] = self.rng.random((self.nnodes_dict[name]))
+            values_dict["DN"] = self.rng.random((self.nnodes_dict[name], self.dim)).flatten()
+        else:
+            for name in self.nnodes_dict.keys():
+                values_dict[f"N_{name}"] = self.rng.random((self.nnodes_dict[name]))
+                values_dict[f"DN_{name}"] = self.rng.random((self.nnodes_dict[name], self.dim)).flatten()
+
+        for var_type, vars_info in self.vars_dict.items():
+            if var_type in ["nodal_scalars", "nodal_vectors"]:
+                for elem_space_name, vars_list in vars_info.items():
+                    var_shape = self.shape_map[var_type][elem_space_name]
+                    self.add_variables_values(var_type, vars_list, var_shape, values_dict)
+            else:
+                vars_list = vars_info
+                var_shape = self.shape_map[var_type]
+                self.add_variables_values(var_type, vars_list, var_shape, values_dict)
 
         return values_dict
     
